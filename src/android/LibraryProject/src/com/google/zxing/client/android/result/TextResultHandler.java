@@ -29,16 +29,15 @@ import android.app.Activity;
  */
 public final class TextResultHandler extends ResultHandler {
 
-  private static int[] buttons;
+  private static final int[] buttons = {
+      R.string.button_web_search,
+      R.string.button_share_by_email,
+      R.string.button_share_by_sms,
+      R.string.button_custom_product_search,
+  };
 
   public TextResultHandler(Activity activity, ParsedResult result, Result rawResult) {
     super(activity, result, rawResult);
-	buttons = new int[]{
-		fakeR.getId("string", "button_web_search"),
-		fakeR.getId("string", "button_share_by_email"),
-		fakeR.getId("string", "button_share_by_sms"),
-		fakeR.getId("string", "button_custom_product_search"),
-	};
   }
 
   @Override
@@ -72,6 +71,6 @@ public final class TextResultHandler extends ResultHandler {
 
   @Override
   public int getDisplayTitle() {
-    return fakeR.getId("string", "result_text");
+    return R.string.result_text;
   }
 }

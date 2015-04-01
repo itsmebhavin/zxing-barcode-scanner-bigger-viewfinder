@@ -24,6 +24,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.Menu;
@@ -31,31 +32,29 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.ListView;
-import com.google.zxing.FakeR;
 import com.google.zxing.client.android.CaptureActivity;
 import com.google.zxing.client.android.Intents;
 import com.google.zxing.client.android.R;
-
-import java.util.List;
 
 public final class HistoryActivity extends ListActivity {
 
   private static final String TAG = HistoryActivity.class.getSimpleName();
 
   private HistoryManager historyManager;
-  private HistoryItemAdapter adapter;
+  private ArrayAdapter<HistoryItem> adapter;
+  private CharSequence originalTitle;
   
-  private static FakeR fakeR;
   @Override
   protected void onCreate(Bundle icicle) {
     super.onCreate(icicle);
-    fakeR = new FakeR(this);
     this.historyManager = new HistoryManager(this);  
     adapter = new HistoryItemAdapter(this);
     setListAdapter(adapter);
-    ListView listview = getListView();
+    View listview = getListView();
     registerForContextMenu(listview);
+    originalTitle = getTitle();
   }
 
   @Override
@@ -65,11 +64,12 @@ public final class HistoryActivity extends ListActivity {
   }
 
   private void reloadHistoryItems() {
-    List<HistoryItem> items = historyManager.buildHistoryItems();
+    Iterable<HistoryItem> items = historyManager.buildHistoryItems();
     adapter.clear();
     for (HistoryItem item : items) {
       adapter.add(item);
     }
+    setTitle(originalTitle + " (" + adapter.getCount() + ')');
     if (adapter.isEmpty()) {
       adapter.add(new HistoryItem(null, null, null));
     }
@@ -91,7 +91,7 @@ public final class HistoryActivity extends ListActivity {
                                   ContextMenu.ContextMenuInfo menuInfo) {
     int position = ((AdapterView.AdapterContextMenuInfo) menuInfo).position;
     if (position >= adapter.getCount() || adapter.getItem(position).getResult() != null) {
-      menu.add(Menu.NONE, position, position, fakeR.getId("string", "history_clear_one_history_text"));
+      menu.add(Menu.NONE, position, position, R.string.history_clear_one_history_text);
     } // else it's just that dummy "Empty" message
   }
 
@@ -107,26 +107,26 @@ public final class HistoryActivity extends ListActivity {
   public boolean onCreateOptionsMenu(Menu menu) {
     if (historyManager.hasHistoryItems()) {
       MenuInflater menuInflater = getMenuInflater();
-      menuInflater.inflate(fakeR.getId("menu", "history"), menu);
+      menuInflater.inflate(R.menu.history, menu);
     }
     return super.onCreateOptionsMenu(menu);
   }
 
   @Override
   public boolean onOptionsItemSelected(MenuItem item) {
-    int itemId = item.getItemId();
-    if (itemId == fakeR.getId("id", "menu_history_send")) {
+    switch (item.getItemId()) {
+      case R.id.menu_history_send:
         CharSequence history = historyManager.buildHistory();
-        Uri historyFile = HistoryManager.saveHistory(history.toString());
+        Parcelable historyFile = HistoryManager.saveHistory(history.toString());
         if (historyFile == null) {
           AlertDialog.Builder builder = new AlertDialog.Builder(this);
-          builder.setMessage(fakeR.getId("string", "msg_unmount_usb"));
-          builder.setPositiveButton(fakeR.getId("string", "button_ok"), null);
+          builder.setMessage(R.string.msg_unmount_usb);
+          builder.setPositiveButton(R.string.button_ok, null);
           builder.show();
         } else {
           Intent intent = new Intent(Intent.ACTION_SEND, Uri.parse("mailto:"));
           intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_WHEN_TASK_RESET);
-          String subject = getResources().getString(fakeR.getId("string", "history_email_title"));
+          String subject = getResources().getString(R.string.history_email_title);
           intent.putExtra(Intent.EXTRA_SUBJECT, subject);
           intent.putExtra(Intent.EXTRA_TEXT, subject);
           intent.putExtra(Intent.EXTRA_STREAM, historyFile);
@@ -137,11 +137,12 @@ public final class HistoryActivity extends ListActivity {
             Log.w(TAG, anfe.toString());
           }
         }
-    } else if (itemId == fakeR.getId("id", "menu_history_clear_text")) {
+        break;
+      case R.id.menu_history_clear_text:
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(fakeR.getId("string", "msg_sure"));
+        builder.setMessage(R.string.msg_sure);
         builder.setCancelable(true);
-        builder.setPositiveButton(fakeR.getId("string", "button_ok"), new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.button_ok, new DialogInterface.OnClickListener() {
           @Override
           public void onClick(DialogInterface dialog, int i2) {
             historyManager.clearHistory();
@@ -149,9 +150,10 @@ public final class HistoryActivity extends ListActivity {
             finish();
           }
         });
-        builder.setNegativeButton(fakeR.getId("string", "button_cancel"), null);
+        builder.setNegativeButton(R.string.button_cancel, null);
         builder.show();
-    } else {
+        break;
+      default:
         return super.onOptionsItemSelected(item);
     }
     return true;
