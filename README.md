@@ -1,3 +1,5 @@
+How I generated this modified ZXING .jar file?
+------------------------------------------------
 Viewfinder (crop) area can be increased by changing the "MAX_FRAME_WIDTH" and "MAX_FRAME_HEIGHT" in "CameraManager.java" (lines 44 and 45). CameraManager.java can be found in:
 
 yourproject/plugins/com.phonegap.plugins.barcodescanner/src/android/LibraryProject/src/com/google/zxing/client/android/camera/CameraManager.java
