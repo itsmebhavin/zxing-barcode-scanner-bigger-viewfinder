@@ -21,3 +21,26 @@ so rename it to: com.google.zxing.client.android.captureactivity.jar and put it 
 also, to avoid removing/re-adding the platform (to redeploy the plugin) i also copied the file to: yourproject\platforms\android\libs\com.google.zxing.client.android.captureactivity.jar
 
 then just built the project.
+
+
+HOW TO USE?
+------------
+1. Grab pre-built com.google.zxing.client.android.captureactivity.jar file from dist directory & place it under 2 locations in your projects.
+    - yourpoject\plugins\com.phonegap.plugins.barcodescanner\src\android\
+    - yourproject\platforms\android\libs\
+2. Build your project and you should have barcode scanner with bigger viewfinder.
+
+
+SOURCE 
+--------
+
+Thanks to Original ZXING Project 
+      https://github.com/zxing/zxing
+and also barcode scanner plugin for cordova (Source of my project)
+      https://github.com/wildabeast/BarcodeScanner/#using-the-plugin
+      
+      
+
+
+
+2.  
