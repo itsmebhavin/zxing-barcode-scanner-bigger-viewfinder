@@ -53,7 +53,7 @@ public final class HistoryManager {
 
   private static final String TAG = HistoryManager.class.getSimpleName();
 
-  private static final int MAX_ITEMS = 2000;
+  private static final int MAX_ITEMS = 500;
 
   private static final String[] COLUMNS = {
       DBHelper.TEXT_COL,
@@ -67,14 +67,13 @@ public final class HistoryManager {
 
   private static final String[] ID_COL_PROJECTION = { DBHelper.ID_COL };
   private static final String[] ID_DETAIL_COL_PROJECTION = { DBHelper.ID_COL, DBHelper.DETAILS_COL };
+  private static final DateFormat EXPORT_DATE_TIME_FORMAT =
+      DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.MEDIUM);
 
   private final Activity activity;
-  private final boolean enableHistory;
 
   public HistoryManager(Activity activity) {
     this.activity = activity;
-    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
-    enableHistory = prefs.getBoolean(PreferencesActivity.KEY_ENABLE_HISTORY, true);
   }
 
   public boolean hasHistoryItems() {
@@ -93,7 +92,7 @@ public final class HistoryManager {
 
   public List<HistoryItem> buildHistoryItems() {
     SQLiteOpenHelper helper = new DBHelper(activity);
-    List<HistoryItem> items = new ArrayList<>();
+    List<HistoryItem> items = new ArrayList<HistoryItem>();
     SQLiteDatabase db = null;
     Cursor cursor = null;
     try {
@@ -155,7 +154,7 @@ public final class HistoryManager {
     // Do not save this item to the history if the preference is turned off, or the contents are
     // considered secure.
     if (!activity.getIntent().getBooleanExtra(Intents.Scan.SAVE_HISTORY, true) ||
-        handler.areContentsSecure() || !enableHistory) {
+        handler.areContentsSecure()) {
       return;
     }
 
@@ -205,19 +204,10 @@ public final class HistoryManager {
       }
 
       if (oldID != null) {
-        String newDetails;
-        if (oldDetails == null) {
-          newDetails = itemDetails;
-        } else if (oldDetails.contains(itemDetails)) {
-          newDetails = null;
-        } else {
-          newDetails = oldDetails + " : " + itemDetails;
-        } 
-        if (newDetails != null) {
-          ContentValues values = new ContentValues();
-          values.put(DBHelper.DETAILS_COL, newDetails);
-          db.update(DBHelper.TABLE_NAME, values, DBHelper.ID_COL + "=?", new String[] { oldID });
-        }
+        String newDetails = oldDetails == null ? itemDetails : oldDetails + " : " + itemDetails;
+        ContentValues values = new ContentValues();
+        values.put(DBHelper.DETAILS_COL, newDetails);
+        db.update(DBHelper.TABLE_NAME, values, DBHelper.ID_COL + "=?", new String[] { oldID });
       }
 
     } finally {
@@ -248,13 +238,12 @@ public final class HistoryManager {
                         DBHelper.TIMESTAMP_COL + " DESC");
       cursor.move(MAX_ITEMS);
       while (cursor.moveToNext()) {
-        String id = cursor.getString(0);
-        Log.i(TAG, "Deleting scan history ID " + id);
-        db.delete(DBHelper.TABLE_NAME, DBHelper.ID_COL + '=' + id, null);
+        db.delete(DBHelper.TABLE_NAME, DBHelper.ID_COL + '=' + cursor.getString(0), null);
       }
     } catch (SQLiteException sqle) {
       // We're seeing an error here when called in CaptureActivity.onCreate() in rare cases
       // and don't understand it. First theory is that it's transient so can be safely ignored.
+      // TODO revisit this after live in a future version to see if it 'worked'
       Log.w(TAG, sqle);
       // continue
     } finally {
@@ -268,16 +257,16 @@ public final class HistoryManager {
    * and double-quoted. Double-quotes within values are escaped with a sequence of two
    * double-quotes. The fields output are:</p>
    *
-   * <ol>
+   * <ul>
    *  <li>Raw text</li>
    *  <li>Display text</li>
    *  <li>Format (e.g. QR_CODE)</li>
-   *  <li>Unix timestamp (milliseconds since the epoch)</li>
+   *  <li>Timestamp</li>
    *  <li>Formatted version of timestamp</li>
-   *  <li>Supplemental info (e.g. price info for a product barcode)</li>
-   * </ol>
+   * </ul>
    */
   CharSequence buildHistory() {
+    StringBuilder historyText = new StringBuilder(1000);
     SQLiteOpenHelper helper = new DBHelper(activity);
     SQLiteDatabase db = null;
     Cursor cursor = null;
@@ -288,8 +277,6 @@ public final class HistoryManager {
                         null, null, null, null,
                         DBHelper.TIMESTAMP_COL + " DESC");
 
-      DateFormat format = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.MEDIUM);
-      StringBuilder historyText = new StringBuilder(1000);
       while (cursor.moveToNext()) {
 
         historyText.append('"').append(massageHistoryField(cursor.getString(0))).append("\",");
@@ -300,7 +287,7 @@ public final class HistoryManager {
         // Add timestamp again, formatted
         long timestamp = cursor.getLong(3);
         historyText.append('"').append(massageHistoryField(
-            format.format(new Date(timestamp)))).append("\",");
+            EXPORT_DATE_TIME_FORMAT.format(new Date(timestamp)))).append("\",");
 
         // Above we're preserving the old ordering of columns which had formatted data in position 5
 

@@ -30,23 +30,8 @@ public final class ChecksumException extends ReaderException {
     // do nothing
   }
 
-  private ChecksumException(Throwable cause) {
-    super(cause);
-  }
-
   public static ChecksumException getChecksumInstance() {
-    if (isStackTrace) {
-      return new ChecksumException();
-    } else {
-      return instance;
-    }
+    return instance;
   }
 
-  public static ChecksumException getChecksumInstance(Throwable cause) {
-    if (isStackTrace) {
-      return new ChecksumException(cause);
-    } else {
-      return instance;
-    }
-  }
 }

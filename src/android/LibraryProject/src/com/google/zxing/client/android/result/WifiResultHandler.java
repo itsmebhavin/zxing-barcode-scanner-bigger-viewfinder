@@ -16,34 +16,33 @@
 
 package com.google.zxing.client.android.result;
 
-import android.app.Activity;
 import android.content.Context;
 import android.net.wifi.WifiManager;
-import android.os.AsyncTask;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.google.zxing.client.android.CaptureActivity;
 import com.google.zxing.client.android.R;
+import com.google.zxing.client.android.common.executor.AsyncTaskExecInterface;
+import com.google.zxing.client.android.common.executor.AsyncTaskExecManager;
 import com.google.zxing.client.android.wifi.WifiConfigManager;
 import com.google.zxing.client.result.ParsedResult;
 import com.google.zxing.client.result.WifiParsedResult;
 
 /**
- * Handles wifi access information.
+ * Handles address book entries.
  *
  * @author Vikram Aggarwal
  * @author Sean Owen
  */
 public final class WifiResultHandler extends ResultHandler {
 
-  private static final String TAG = WifiResultHandler.class.getSimpleName();
-
   private final CaptureActivity parent;
+  private final AsyncTaskExecInterface taskExec;
 
   public WifiResultHandler(CaptureActivity activity, ParsedResult result) {
     super(activity, result);
     parent = activity;
+    taskExec = new AsyncTaskExecManager().build();
   }
 
   @Override
@@ -54,7 +53,7 @@ public final class WifiResultHandler extends ResultHandler {
 
   @Override
   public int getButtonText(int index) {
-    return R.string.button_wifi;
+    return fakeR.getId("string", "button_wifi");
   }
 
   @Override
@@ -62,18 +61,8 @@ public final class WifiResultHandler extends ResultHandler {
     if (index == 0) {
       WifiParsedResult wifiResult = (WifiParsedResult) getResult();
       WifiManager wifiManager = (WifiManager) getActivity().getSystemService(Context.WIFI_SERVICE);
-      if (wifiManager == null) {
-        Log.w(TAG, "No WifiManager available from device");
-        return;
-      }
-      final Activity activity = getActivity();
-      activity.runOnUiThread(new Runnable() {
-        @Override
-        public void run() {
-          Toast.makeText(activity.getApplicationContext(), R.string.wifi_changing_network, Toast.LENGTH_SHORT).show();
-        }
-      });
-      new WifiConfigManager(wifiManager).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, wifiResult);
+      Toast.makeText(getActivity(), fakeR.getId("string", "wifi_changing_network"), Toast.LENGTH_LONG).show();
+      taskExec.execute(new WifiConfigManager(wifiManager), wifiResult);
       parent.restartPreviewAfterDelay(0L);
     }
   }
@@ -82,11 +71,16 @@ public final class WifiResultHandler extends ResultHandler {
   @Override
   public CharSequence getDisplayContents() {
     WifiParsedResult wifiResult = (WifiParsedResult) getResult();
-    return wifiResult.getSsid() + " (" + wifiResult.getNetworkEncryption() + ')';
+    StringBuilder contents = new StringBuilder(50);
+    String wifiLabel = parent.getString(fakeR.getId("string", "wifi_ssid_label"));
+    ParsedResult.maybeAppend(wifiLabel + '\n' + wifiResult.getSsid(), contents);
+    String typeLabel = parent.getString(fakeR.getId("string", "wifi_type_label"));
+    ParsedResult.maybeAppend(typeLabel + '\n' + wifiResult.getNetworkEncryption(), contents);
+    return contents.toString();
   }
 
   @Override
   public int getDisplayTitle() {
-    return R.string.result_wifi;
+    return fakeR.getId("string", "result_wifi");
   }
 }

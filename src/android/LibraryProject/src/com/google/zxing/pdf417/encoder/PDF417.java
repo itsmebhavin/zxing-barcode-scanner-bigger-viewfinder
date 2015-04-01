@@ -22,12 +22,10 @@ package com.google.zxing.pdf417.encoder;
 
 import com.google.zxing.WriterException;
 
-import java.nio.charset.Charset;
-
 /**
  * Top-level class for the logic part of the PDF417 implementation.
  */
-public final class PDF417 {
+final class PDF417 {
 
   /**
    * The start pattern (17 bits)
@@ -515,28 +513,55 @@ public final class PDF417 {
   private BarcodeMatrix barcodeMatrix;
   private boolean compact;
   private Compaction compaction;
-  private Charset encoding;
   private int minCols;
   private int maxCols;
   private int maxRows;
   private int minRows;
 
-  public PDF417() {
+  PDF417() {
     this(false);
   }
 
-  public PDF417(boolean compact) {
+  PDF417(boolean compact) {
     this.compact = compact;
     compaction = Compaction.AUTO;
-    encoding = null; // Use default
     minCols = 2;
     maxCols = 30;
     maxRows = 30;
     minRows = 2;
   }
 
-  public BarcodeMatrix getBarcodeMatrix() {
+  BarcodeMatrix getBarcodeMatrix() {
     return barcodeMatrix;
+  }
+
+  /**
+   * Calculates the necessary number of rows as described in annex Q of ISO/IEC 15438:2001(E).
+   *
+   * @param m the number of source codewords prior to the additional of the Symbol Length
+   *          Descriptor and any pad codewords
+   * @param k the number of error correction codewords
+   * @param c the number of columns in the symbol in the data region (excluding start, stop and
+   *          row indicator codewords)
+   * @return the number of rows in the symbol (r)
+   */
+  private static int getNumberOfRows(int m, int k, int c) throws WriterException {
+    int r = calculateNumberOfRows(m, k, c);
+    if (r > 90) {
+      throw new WriterException(
+          "The message doesn't fit in the configured symbol size."
+              + " The resultant number of rows for this barcode exceeds 90."
+              + " Please increase the number of columns or decrease the error correction"
+              + " level to reduce the number of rows.");
+    }
+    if (r < 2) {
+      throw new WriterException(
+          "The message is too short for the configured symbol size."
+              + " The resultant number of rows is less than 3."
+              + " Please decrease the number of columns or increase the error correction"
+              + " level to increase the number of rows.");
+    }
+    return r;
   }
 
   /**
@@ -638,15 +663,15 @@ public final class PDF417 {
   }
 
   /**
-   * @param msg message to encode
-   * @param errorCorrectionLevel PDF417 error correction level to use
-   * @throws WriterException if the contents cannot be encoded in this format
+   * Generates the barcode logic.
+   *
+   * @param msg        the message to encode
    */
-  public void generateBarcodeLogic(String msg, int errorCorrectionLevel) throws WriterException {
+  void generateBarcodeLogic(String msg, int errorCorrectionLevel) throws WriterException {
 
     //1. step: High-level encoding
     int errorCorrectionCodeWords = PDF417ErrorCorrection.getErrorCorrectionCodewordCount(errorCorrectionLevel);
-    String highLevel = PDF417HighLevelEncoder.encodeHighLevel(msg, compaction, encoding);
+    String highLevel = PDF417HighLevelEncoder.encodeHighLevel(msg, compaction);
     int sourceCodeWords = highLevel.length();
 
     int[] dimension = determineDimensions(sourceCodeWords, errorCorrectionCodeWords);
@@ -687,7 +712,7 @@ public final class PDF417 {
    * @param errorCorrectionCodeWords number of error correction code words
    * @return dimension object containing cols as width and rows as height
    */
-  private int[] determineDimensions(int sourceCodeWords, int errorCorrectionCodeWords) throws WriterException {
+  int[] determineDimensions(int sourceCodeWords, int errorCorrectionCodeWords) throws WriterException {
     float ratio = 0.0f;
     int[] dimension = null;
 
@@ -731,13 +756,8 @@ public final class PDF417 {
 
   /**
    * Sets max/min row/col values
-   *
-   * @param maxCols maximum allowed columns
-   * @param minCols minimum allowed columns
-   * @param maxRows maximum allowed rows
-   * @param minRows minimum allowed rows
    */
-  public void setDimensions(int maxCols, int minCols, int maxRows, int minRows) {
+  void setDimensions(int maxCols, int minCols, int maxRows, int minRows) {
     this.maxCols = maxCols;
     this.minCols = minCols;
     this.maxRows = maxRows;
@@ -745,24 +765,18 @@ public final class PDF417 {
   }
 
   /**
-   * @param compaction compaction mode to use
+   * Sets compaction to values stored in {@link Compaction} enum
    */
-  public void setCompaction(Compaction compaction) {
+  void setCompaction(Compaction compaction) {
     this.compaction = compaction;
   }
 
   /**
-   * @param compact if true, enables compaction
+   * Sets compact to be true or false
+   * @param compact
    */
-  public void setCompact(boolean compact) {
+  void setCompact(boolean compact) {
     this.compact = compact;
-  }
-
-  /**
-   * @param encoding sets character encoding to use
-   */
-  public void setEncoding(Charset encoding) {
-    this.encoding = encoding;
   }
 
 }

@@ -25,7 +25,6 @@
  */
 package com.google.zxing.oned.rss.expanded.decoders;
 
-import com.google.zxing.FormatException;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.common.BitArray;
 
@@ -43,7 +42,7 @@ final class AI01393xDecoder extends AI01decoder {
   }
 
   @Override
-  public String parseInformation() throws NotFoundException, FormatException {
+  public String parseInformation() throws NotFoundException {
     if(this.getInformation().getSize() < HEADER_SIZE + GTIN_SIZE) {
       throw NotFoundException.getNotFoundInstance();
     }

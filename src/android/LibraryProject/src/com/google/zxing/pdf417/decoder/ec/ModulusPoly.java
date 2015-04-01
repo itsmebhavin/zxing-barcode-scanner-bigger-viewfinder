@@ -38,7 +38,7 @@ final class ModulusPoly {
         firstNonZero++;
       }
       if (firstNonZero == coefficientsLength) {
-        this.coefficients = new int[]{0};
+        this.coefficients = field.getZero().coefficients;
       } else {
         this.coefficients = new int[coefficientsLength - firstNonZero];
         System.arraycopy(coefficients,

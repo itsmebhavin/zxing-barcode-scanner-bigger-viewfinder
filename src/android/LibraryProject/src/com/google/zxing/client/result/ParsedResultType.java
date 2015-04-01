@@ -35,6 +35,5 @@ public enum ParsedResultType {
   CALENDAR,
   WIFI,
   ISBN,
-  VIN,
 
 }

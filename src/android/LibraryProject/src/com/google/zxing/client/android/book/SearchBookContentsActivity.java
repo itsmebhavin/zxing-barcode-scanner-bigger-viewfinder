@@ -26,9 +26,11 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.webkit.CookieManager;
 import android.webkit.CookieSyncManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
+import com.google.zxing.FakeR;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -43,6 +45,8 @@ import com.google.zxing.client.android.Intents;
 import com.google.zxing.client.android.HttpHelper;
 import com.google.zxing.client.android.LocaleManager;
 import com.google.zxing.client.android.R;
+import com.google.zxing.client.android.common.executor.AsyncTaskExecInterface;
+import com.google.zxing.client.android.common.executor.AsyncTaskExecManager;
 
 /**
  * Uses Google Book Search to find a word or phrase in the requested book.
@@ -61,12 +65,17 @@ public final class SearchBookContentsActivity extends Activity {
 
   private String isbn;
   private EditText queryTextView;
-  private View queryButton;
+  private Button queryButton;
   private ListView resultListView;
   private TextView headerView;
-  private AsyncTask<String,?,?> networkTask;
+  private NetworkTask networkTask;
+  private final AsyncTaskExecInterface taskExec;
 
-  private final View.OnClickListener buttonListener = new View.OnClickListener() {
+  public SearchBookContentsActivity() {
+    taskExec = new AsyncTaskExecManager().build();
+  }
+
+  private final Button.OnClickListener buttonListener = new Button.OnClickListener() {
     @Override
     public void onClick(View view) {
       launchSearch();
@@ -88,9 +97,13 @@ public final class SearchBookContentsActivity extends Activity {
     return isbn;
   }
 
+  private static FakeR fakeR;
+
   @Override
   public void onCreate(Bundle icicle) {
     super.onCreate(icicle);
+
+	fakeR = new FakeR(this);
 
     // Make sure that expired cookies are removed on launch.
     CookieSyncManager.createInstance(this);
@@ -104,27 +117,27 @@ public final class SearchBookContentsActivity extends Activity {
 
     isbn = intent.getStringExtra(Intents.SearchBookContents.ISBN);
     if (LocaleManager.isBookSearchUrl(isbn)) {
-      setTitle(getString(R.string.sbc_name));
+      setTitle(getString(fakeR.getId("string", "sbc_name")));
     } else {
-      setTitle(getString(R.string.sbc_name) + ": ISBN " + isbn);
+      setTitle(getString(fakeR.getId("string", "sbc_name")) + ": ISBN " + isbn);
     }
 
-    setContentView(R.layout.search_book_contents);
-    queryTextView = (EditText) findViewById(R.id.query_text_view);
+    setContentView(fakeR.getId("layout", "search_book_contents"));
+    queryTextView = (EditText) findViewById(fakeR.getId("id", "query_text_view"));
 
     String initialQuery = intent.getStringExtra(Intents.SearchBookContents.QUERY);
-    if (initialQuery != null && !initialQuery.isEmpty()) {
+    if (initialQuery != null && initialQuery.length() > 0) {
       // Populate the search box but don't trigger the search
       queryTextView.setText(initialQuery);
     }
     queryTextView.setOnKeyListener(keyListener);
 
-    queryButton = findViewById(R.id.query_button);
+    queryButton = (Button) findViewById(fakeR.getId("id", "query_button"));
     queryButton.setOnClickListener(buttonListener);
 
-    resultListView = (ListView) findViewById(R.id.result_list_view);
+    resultListView = (ListView) findViewById(fakeR.getId("id", "result_list_view"));
     LayoutInflater factory = LayoutInflater.from(this);
-    headerView = (TextView) factory.inflate(R.layout.search_book_contents_header,
+    headerView = (TextView) factory.inflate(fakeR.getId("layout", "search_book_contents_header"),
         resultListView, false);
     resultListView.addHeaderView(headerView);
   }
@@ -137,7 +150,7 @@ public final class SearchBookContentsActivity extends Activity {
 
   @Override
   protected void onPause() {
-    AsyncTask<?,?,?> oldTask = networkTask;
+    NetworkTask oldTask = networkTask;
     if (oldTask != null) {
       oldTask.cancel(true);
       networkTask = null;
@@ -147,14 +160,14 @@ public final class SearchBookContentsActivity extends Activity {
 
   private void launchSearch() {
     String query = queryTextView.getText().toString();
-    if (query != null && !query.isEmpty()) {
-      AsyncTask<?,?,?> oldTask = networkTask;
+    if (query != null && query.length() > 0) {
+      NetworkTask oldTask = networkTask;
       if (oldTask != null) {
         oldTask.cancel(true);
       }
       networkTask = new NetworkTask();
-      networkTask.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, query, isbn);
-      headerView.setText(R.string.msg_sbc_searching_book);
+      taskExec.execute(networkTask, query, isbn);
+      headerView.setText(fakeR.getId("string", "msg_sbc_searching_book"));
       resultListView.setAdapter(null);
       queryTextView.setEnabled(false);
       queryButton.setEnabled(false);
@@ -193,7 +206,7 @@ public final class SearchBookContentsActivity extends Activity {
     @Override
     protected void onPostExecute(JSONObject result) {
       if (result == null) {
-        headerView.setText(R.string.msg_sbc_failed);
+        headerView.setText(fakeR.getId("string", "msg_sbc_failed"));
       } else {
         handleSearchResults(result);
       }
@@ -207,11 +220,11 @@ public final class SearchBookContentsActivity extends Activity {
     private void handleSearchResults(JSONObject json) {
       try {
         int count = json.getInt("number_of_results");
-        headerView.setText(getString(R.string.msg_sbc_results) + " : " + count);
+        headerView.setText(getString(fakeR.getId("string", "msg_sbc_results")) + " : " + count);
         if (count > 0) {
           JSONArray results = json.getJSONArray("search_results");
           SearchBookContentsResult.setQuery(queryTextView.getText().toString());
-          List<SearchBookContentsResult> items = new ArrayList<>(count);
+          List<SearchBookContentsResult> items = new ArrayList<SearchBookContentsResult>(count);
           for (int x = 0; x < count; x++) {
             items.add(parseResult(results.getJSONObject(x)));
           }
@@ -220,54 +233,49 @@ public final class SearchBookContentsActivity extends Activity {
         } else {
           String searchable = json.optString("searchable");
           if ("false".equals(searchable)) {
-            headerView.setText(R.string.msg_sbc_book_not_searchable);
+            headerView.setText(fakeR.getId("string", "msg_sbc_book_not_searchable"));
           }
           resultListView.setAdapter(null);
         }
       } catch (JSONException e) {
         Log.w(TAG, "Bad JSON from book search", e);
         resultListView.setAdapter(null);
-        headerView.setText(R.string.msg_sbc_failed);
+        headerView.setText(fakeR.getId("string", "msg_sbc_failed"));
       }
     }
 
-    // Available fields: page_id, page_number, snippet_text
+    // Available fields: page_id, page_number, page_url, snippet_text
     private SearchBookContentsResult parseResult(JSONObject json) {
-
-      String pageId;
-      String pageNumber;
-      String snippet;
       try {
-        pageId = json.getString("page_id");
-        pageNumber = json.optString("page_number");
-        snippet = json.optString("snippet_text");        
-      } catch (JSONException e) {
-        Log.w(TAG, e);
-        // Never seen in the wild, just being complete.
-        return new SearchBookContentsResult(getString(R.string.msg_sbc_no_page_returned), "", "", false);
-      }
-      
-      if (pageNumber == null || pageNumber.isEmpty()) {
-        // This can happen for text on the jacket, and possibly other reasons.
-        pageNumber = "";
-      } else {
-        pageNumber = getString(R.string.msg_sbc_page) + ' ' + pageNumber;
-      }
-      
-      boolean valid = snippet != null && !snippet.isEmpty();
-      if (valid) {
-        // Remove all HTML tags and encoded characters.          
-        snippet = TAG_PATTERN.matcher(snippet).replaceAll("");
-        snippet = LT_ENTITY_PATTERN.matcher(snippet).replaceAll("<");
-        snippet = GT_ENTITY_PATTERN.matcher(snippet).replaceAll(">");
-        snippet = QUOTE_ENTITY_PATTERN.matcher(snippet).replaceAll("'");
-        snippet = QUOT_ENTITY_PATTERN.matcher(snippet).replaceAll("\"");
-      } else {
-        snippet = '(' + getString(R.string.msg_sbc_snippet_unavailable) + ')';        
-      }
+        String pageId = json.getString("page_id");
+        String pageNumber = json.getString("page_number");
+        if (pageNumber.length() > 0) {
+          pageNumber = getString(fakeR.getId("string", "msg_sbc_page")) + ' ' + pageNumber;
+        } else {
+          // This can happen for text on the jacket, and possibly other reasons.
+          pageNumber = getString(fakeR.getId("string", "msg_sbc_unknown_page"));
+        }
 
-      return new SearchBookContentsResult(pageId, pageNumber, snippet, valid);
+        // Remove all HTML tags and encoded characters. Ideally the server would do this.
+        String snippet = json.optString("snippet_text");
+        boolean valid = true;
+        if (snippet.length() > 0) {
+          snippet = TAG_PATTERN.matcher(snippet).replaceAll("");
+          snippet = LT_ENTITY_PATTERN.matcher(snippet).replaceAll("<");
+          snippet = GT_ENTITY_PATTERN.matcher(snippet).replaceAll(">");
+          snippet = QUOTE_ENTITY_PATTERN.matcher(snippet).replaceAll("'");
+          snippet = QUOT_ENTITY_PATTERN.matcher(snippet).replaceAll("\"");
+        } else {
+          snippet = '(' + getString(fakeR.getId("string", "msg_sbc_snippet_unavailable")) + ')';
+          valid = false;
+        }
+        return new SearchBookContentsResult(pageId, pageNumber, snippet, valid);
+      } catch (JSONException e) {
+        // Never seen in the wild, just being complete.
+        return new SearchBookContentsResult(getString(fakeR.getId("string", "msg_sbc_no_page_returned")), "", "", false);
+      }
     }
+
 
   }
 

@@ -28,25 +28,11 @@ public final class FormatException extends ReaderException {
   private static final FormatException instance = new FormatException();
 
   private FormatException() {
-  }
-
-  private FormatException(Throwable cause) {
-    super(cause);
+    // do nothing
   }
 
   public static FormatException getFormatInstance() {
-    if (isStackTrace) {
-      return new FormatException();
-    } else {
-      return instance;
-    }
+    return instance;
   }
-  
-  public static FormatException getFormatInstance(Throwable cause) {
-    if (isStackTrace) {
-      return new FormatException(cause);
-    } else {
-      return instance;
-    }
-  }
+
 }

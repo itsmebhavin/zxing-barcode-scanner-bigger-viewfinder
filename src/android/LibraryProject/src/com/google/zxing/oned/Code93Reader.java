@@ -25,7 +25,6 @@ import com.google.zxing.Result;
 import com.google.zxing.ResultPoint;
 import com.google.zxing.common.BitArray;
 
-import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -54,14 +53,6 @@ public final class Code93Reader extends OneDReader {
   };
   private static final int ASTERISK_ENCODING = CHARACTER_ENCODINGS[47];
 
-  private final StringBuilder decodeRowResult;
-  private final int[] counters;
-
-  public Code93Reader() {
-    decodeRowResult = new StringBuilder(20);
-    counters = new int[6];
-  }
-
   @Override
   public Result decodeRow(int rowNumber, BitArray row, Map<DecodeHintType,?> hints)
       throws NotFoundException, ChecksumException, FormatException {
@@ -71,34 +62,26 @@ public final class Code93Reader extends OneDReader {
     int nextStart = row.getNextSet(start[1]);
     int end = row.getSize();
 
-    int[] theCounters = counters;
-    Arrays.fill(theCounters, 0);
-    StringBuilder result = decodeRowResult;
-    result.setLength(0);
-
+    StringBuilder result = new StringBuilder(20);
+    int[] counters = new int[6];
     char decodedChar;
     int lastStart;
     do {
-      recordPattern(row, nextStart, theCounters);
-      int pattern = toPattern(theCounters);
+      recordPattern(row, nextStart, counters);
+      int pattern = toPattern(counters);
       if (pattern < 0) {
         throw NotFoundException.getNotFoundInstance();
       }
       decodedChar = patternToChar(pattern);
       result.append(decodedChar);
       lastStart = nextStart;
-      for (int counter : theCounters) {
+      for (int counter : counters) {
         nextStart += counter;
       }
       // Read off white space
       nextStart = row.getNextSet(nextStart);
     } while (decodedChar != '*');
     result.deleteCharAt(result.length() - 1); // remove asterisk
-
-    int lastPatternSize = 0;
-    for (int counter : theCounters) {
-      lastPatternSize += counter;
-    }
 
     // Should be at least one more black module
     if (nextStart == end || !row.get(nextStart)) {
@@ -117,7 +100,7 @@ public final class Code93Reader extends OneDReader {
     String resultString = decodeExtended(result);
 
     float left = (float) (start[1] + start[0]) / 2.0f;
-    float right = lastStart + lastPatternSize / 2.0f;
+    float right = (float) (nextStart + lastStart) / 2.0f;
     return new Result(
         resultString,
         null,
@@ -128,34 +111,33 @@ public final class Code93Reader extends OneDReader {
 
   }
 
-  private int[] findAsteriskPattern(BitArray row) throws NotFoundException {
+  private static int[] findAsteriskPattern(BitArray row) throws NotFoundException {
     int width = row.getSize();
     int rowOffset = row.getNextSet(0);
 
-    Arrays.fill(counters, 0);
-    int[] theCounters = counters;
+    int counterPosition = 0;
+    int[] counters = new int[6];
     int patternStart = rowOffset;
     boolean isWhite = false;
-    int patternLength = theCounters.length;
+    int patternLength = counters.length;
 
-    int counterPosition = 0;
     for (int i = rowOffset; i < width; i++) {
       if (row.get(i) ^ isWhite) {
-        theCounters[counterPosition]++;
+        counters[counterPosition]++;
       } else {
         if (counterPosition == patternLength - 1) {
-          if (toPattern(theCounters) == ASTERISK_ENCODING) {
+          if (toPattern(counters) == ASTERISK_ENCODING) {
             return new int[]{patternStart, i};
           }
-          patternStart += theCounters[0] + theCounters[1];
-          System.arraycopy(theCounters, 2, theCounters, 0, patternLength - 2);
-          theCounters[patternLength - 2] = 0;
-          theCounters[patternLength - 1] = 0;
+          patternStart += counters[0] + counters[1];
+          System.arraycopy(counters, 2, counters, 0, patternLength - 2);
+          counters[patternLength - 2] = 0;
+          counters[patternLength - 1] = 0;
           counterPosition--;
         } else {
           counterPosition++;
         }
-        theCounters[counterPosition] = 1;
+        counters[counterPosition] = 1;
         isWhite = !isWhite;
       }
     }
@@ -170,16 +152,20 @@ public final class Code93Reader extends OneDReader {
     }
     int pattern = 0;
     for (int i = 0; i < max; i++) {
-      int scaled = Math.round(counters[i] * 9.0f / sum);
-      if (scaled < 1 || scaled > 4) {
+      int scaledShifted = (counters[i] << INTEGER_MATH_SHIFT) * 9 / sum;
+      int scaledUnshifted = scaledShifted >> INTEGER_MATH_SHIFT;
+      if ((scaledShifted & 0xFF) > 0x7F) {
+        scaledUnshifted++;
+      }
+      if (scaledUnshifted < 1 || scaledUnshifted > 4) {
         return -1;
       }
       if ((i & 0x01) == 0) {
-        for (int j = 0; j < scaled; j++) {
+        for (int j = 0; j < scaledUnshifted; j++) {
           pattern = (pattern << 1) | 0x01;
         }
       } else {
-        pattern <<= scaled;
+        pattern <<= scaledUnshifted;
       }
     }
     return pattern;

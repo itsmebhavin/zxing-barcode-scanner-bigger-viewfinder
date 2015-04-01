@@ -17,12 +17,14 @@
 package com.google.zxing.oned;
 
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.ChecksumException;
 import com.google.zxing.FormatException;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.common.BitArray;
 
 /**
  * <p>Implements decoding of the UPC-E format.</p>
+ * <p/>
  * <p><a href="http://www.barcodeisland.com/upce.phtml">This</a> is a great reference for
  * UPC-E information.</p>
  *
@@ -87,7 +89,7 @@ public final class UPCEReader extends UPCEANReader {
   }
 
   @Override
-  protected boolean checkChecksum(String s) throws FormatException {
+  protected boolean checkChecksum(String s) throws FormatException, ChecksumException {
     return super.checkChecksum(convertUPCEtoUPCA(s));
   }
 

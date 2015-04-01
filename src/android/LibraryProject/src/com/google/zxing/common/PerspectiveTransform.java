@@ -83,6 +83,7 @@ public final class PerspectiveTransform {
     }
   }
 
+  /** Convenience method, not optimized for performance. */
   public void transformPoints(float[] xValues, float[] yValues) {
     int n = xValues.length;
     for (int i = 0; i < n; i ++) {

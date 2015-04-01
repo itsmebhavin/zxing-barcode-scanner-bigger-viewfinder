@@ -32,7 +32,7 @@ final class UPCEANExtensionSupport {
     int[] extensionStartRange = UPCEANReader.findGuardPattern(row, rowOffset, false, EXTENSION_START_PATTERN);
     try {
       return fiveSupport.decodeRow(rowNumber, row, extensionStartRange);
-    } catch (ReaderException ignored) {
+    } catch (ReaderException re) {
       return twoSupport.decodeRow(rowNumber, row, extensionStartRange);
     }
   }

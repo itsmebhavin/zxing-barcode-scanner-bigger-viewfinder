@@ -21,6 +21,7 @@ import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 import com.google.zxing.client.result.WifiParsedResult;
@@ -73,7 +74,7 @@ public final class WifiConfigManager extends AsyncTask<WifiParsedResult,Object,O
     NetworkType networkType;
     try {
       networkType = NetworkType.forIntentValue(networkTypeString);
-    } catch (IllegalArgumentException ignored) {
+    } catch (IllegalArgumentException iae) {
       Log.w(TAG, "Bad network type; see NetworkType values: " + networkTypeString);
       return null;
     }
@@ -81,7 +82,7 @@ public final class WifiConfigManager extends AsyncTask<WifiParsedResult,Object,O
       changeNetworkUnEncrypted(wifiManager, theWifiResult);
     } else {
       String password = theWifiResult.getPassword();
-      if (password != null && !password.isEmpty()) {
+      if (password != null && password.length() != 0) {
         if (networkType == NetworkType.WEP) {
           changeNetworkWEP(wifiManager, theWifiResult);
         } else if (networkType == NetworkType.WPA) {
@@ -95,6 +96,7 @@ public final class WifiConfigManager extends AsyncTask<WifiParsedResult,Object,O
   /**
    * Update the network: either create a new network or modify an existing network
    * @param config the new network configuration
+   * @return network ID of the connected network.
    */
   private static void updateNetwork(WifiManager wifiManager, WifiConfiguration config) {
     Integer foundNetworkID = findNetworkInExistingConfig(wifiManager, config.SSID);
@@ -169,10 +171,9 @@ public final class WifiConfigManager extends AsyncTask<WifiParsedResult,Object,O
   }
 
   private static Integer findNetworkInExistingConfig(WifiManager wifiManager, String ssid) {
-    Iterable<WifiConfiguration> existingConfigs = wifiManager.getConfiguredNetworks();
+    List<WifiConfiguration> existingConfigs = wifiManager.getConfiguredNetworks();
     for (WifiConfiguration existingConfig : existingConfigs) {
-      String existingSSID = existingConfig.SSID;
-      if (existingSSID != null && existingSSID.equals(ssid)) {
+      if (existingConfig.SSID.equals(ssid)) {
         return existingConfig.networkId;
       }
     }
@@ -185,19 +186,19 @@ public final class WifiConfigManager extends AsyncTask<WifiParsedResult,Object,O
 
   /**
    * Encloses the incoming string inside double quotes, if it isn't already quoted.
-   * @param s the input string
+   * @param string the input string
    * @return a quoted string, of the form "input".  If the input string is null, it returns null
    * as well.
    */
-  private static String convertToQuotedString(String s) {
-    if (s == null || s.isEmpty()) {
+  private static String convertToQuotedString(String string) {
+    if (string == null || string.length() == 0) {
       return null;
     }
     // If already quoted, return as-is
-    if (s.charAt(0) == '"' && s.charAt(s.length() - 1) == '"') {
-      return s;
+    if (string.charAt(0) == '"' && string.charAt(string.length() - 1) == '"') {
+      return string;
     }
-    return '\"' + s + '\"';
+    return '\"' + string + '\"';
   }
 
   /**

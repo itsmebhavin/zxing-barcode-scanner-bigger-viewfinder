@@ -36,12 +36,12 @@ public final class HistoryItem {
 
   public String getDisplayAndDetails() {
     StringBuilder displayResult = new StringBuilder();
-    if (display == null || display.isEmpty()) {
+    if (display == null || display.length() == 0) {
       displayResult.append(result.getText());
     } else {
       displayResult.append(display);
     }
-    if (details != null && !details.isEmpty()) {
+    if (details != null && details.length() > 0) {
       displayResult.append(" : ").append(details);
     }
     return displayResult.toString();

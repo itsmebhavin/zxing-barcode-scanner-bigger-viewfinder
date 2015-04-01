@@ -58,8 +58,8 @@ public enum CharacterSetECI {
   GB18030(29, "GB2312", "EUC_CN", "GBK"),
   EUC_KR(30, "EUC-KR");
 
-  private static final Map<Integer,CharacterSetECI> VALUE_TO_ECI = new HashMap<>();
-  private static final Map<String,CharacterSetECI> NAME_TO_ECI = new HashMap<>();
+  private static final Map<Integer,CharacterSetECI> VALUE_TO_ECI = new HashMap<Integer,CharacterSetECI>();
+  private static final Map<String,CharacterSetECI> NAME_TO_ECI = new HashMap<String,CharacterSetECI>();
   static {
     for (CharacterSetECI eci : values()) {
       for (int value : eci.values) {
@@ -95,9 +95,9 @@ public enum CharacterSetECI {
 
   /**
    * @param value character set ECI value
-   * @return {@code CharacterSetECI} representing ECI of given value, or null if it is legal but
+   * @return CharacterSetECI representing ECI of given value, or null if it is legal but
    *   unsupported
-   * @throws FormatException if ECI value is invalid
+   * @throws IllegalArgumentException if ECI value is invalid
    */
   public static CharacterSetECI getCharacterSetECIByValue(int value) throws FormatException {
     if (value < 0 || value >= 900) {

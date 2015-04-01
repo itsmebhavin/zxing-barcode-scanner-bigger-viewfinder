@@ -44,8 +44,8 @@ public abstract class UPCEANReader extends OneDReader {
   // These two values are critical for determining how permissive the decoding will be.
   // We've arrived at these values through a lot of trial and error. Setting them any higher
   // lets false positives creep in quickly.
-  private static final float MAX_AVG_VARIANCE = 0.48f;
-  private static final float MAX_INDIVIDUAL_VARIANCE = 0.7f;
+  private static final int MAX_AVG_VARIANCE = (int) (PATTERN_MATCH_RESULT_SCALE_FACTOR * 0.48f);
+  private static final int MAX_INDIVIDUAL_VARIANCE = (int) (PATTERN_MATCH_RESULT_SCALE_FACTOR * 0.7f);
 
   /**
    * Start/end guard pattern.
@@ -132,15 +132,6 @@ public abstract class UPCEANReader extends OneDReader {
    * <p>Like {@link #decodeRow(int, BitArray, java.util.Map)}, but
    * allows caller to inform method about where the UPC/EAN start pattern is
    * found. This allows this to be computed once and reused across many implementations.</p>
-   *
-   * @param rowNumber row index into the image
-   * @param row encoding of the row of the barcode image
-   * @param startGuardRange start/end column where the opening start pattern was found
-   * @param hints optional hints that influence decoding
-   * @return {@link Result} encapsulating the result of decoding a barcode in the row
-   * @throws NotFoundException if no potential barcode is found
-   * @throws ChecksumException if a potential barcode is found but does not pass its checksum
-   * @throws FormatException if a potential barcode is found but format is invalid
    */
   public Result decodeRow(int rowNumber,
                           BitArray row,
@@ -185,10 +176,6 @@ public abstract class UPCEANReader extends OneDReader {
     }
 
     String resultString = result.toString();
-    // UPC/EAN should never be less than 8 chars anyway
-    if (resultString.length() < 8) {
-      throw FormatException.getFormatInstance();
-    }
     if (!checkChecksum(resultString)) {
       throw ChecksumException.getChecksumInstance();
     }
@@ -203,31 +190,13 @@ public abstract class UPCEANReader extends OneDReader {
             new ResultPoint(right, (float) rowNumber)},
         format);
 
-    int extensionLength = 0;
-
     try {
       Result extensionResult = extensionReader.decodeRow(rowNumber, row, endRange[1]);
       decodeResult.putMetadata(ResultMetadataType.UPC_EAN_EXTENSION, extensionResult.getText());
       decodeResult.putAllMetadata(extensionResult.getResultMetadata());
       decodeResult.addResultPoints(extensionResult.getResultPoints());
-      extensionLength = extensionResult.getText().length();
     } catch (ReaderException re) {
       // continue
-    }
-
-    int[] allowedExtensions =
-        hints == null ? null : (int[]) hints.get(DecodeHintType.ALLOWED_EAN_EXTENSIONS);
-    if (allowedExtensions != null) {
-      boolean valid = false;
-      for (int length : allowedExtensions) {
-        if (extensionLength == length) {
-          valid = true;
-          break;
-        }
-      }
-      if (!valid) {
-        throw NotFoundException.getNotFoundInstance();
-      }
     }
 
     if (format == BarcodeFormat.EAN_13 || format == BarcodeFormat.UPC_A) {
@@ -241,11 +210,9 @@ public abstract class UPCEANReader extends OneDReader {
   }
 
   /**
-   * @param s string of digits to check
    * @return {@link #checkStandardUPCEANChecksum(CharSequence)}
-   * @throws FormatException if the string does not contain only digits
    */
-  boolean checkChecksum(String s) throws FormatException {
+  boolean checkChecksum(String s) throws ChecksumException, FormatException {
     return checkStandardUPCEANChecksum(s);
   }
 
@@ -353,12 +320,12 @@ public abstract class UPCEANReader extends OneDReader {
   static int decodeDigit(BitArray row, int[] counters, int rowOffset, int[][] patterns)
       throws NotFoundException {
     recordPattern(row, rowOffset, counters);
-    float bestVariance = MAX_AVG_VARIANCE; // worst variance we'll accept
+    int bestVariance = MAX_AVG_VARIANCE; // worst variance we'll accept
     int bestMatch = -1;
     int max = patterns.length;
     for (int i = 0; i < max; i++) {
       int[] pattern = patterns[i];
-      float variance = patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE);
+      int variance = patternMatchVariance(counters, pattern, MAX_INDIVIDUAL_VARIANCE);
       if (variance < bestVariance) {
         bestVariance = variance;
         bestMatch = i;

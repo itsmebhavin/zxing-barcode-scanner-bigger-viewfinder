@@ -22,12 +22,7 @@ package com.google.zxing.client.android.encode;
  * @author Sean Owen
  */
 interface Formatter {
-
-  /**
-   * @param value value to format
-   * @param index index of value in a list of values to be formatted
-   * @return formatted value
-   */
-  CharSequence format(CharSequence value, int index);
+  
+  String format(String source);
   
 }

@@ -26,7 +26,6 @@
 
 package com.google.zxing.oned.rss.expanded.decoders;
 
-import com.google.zxing.FormatException;
 import com.google.zxing.NotFoundException;
 import com.google.zxing.common.BitArray;
 
@@ -44,7 +43,7 @@ final class GeneralAppIdDecoder {
     this.information = information;
   }
 
-  String decodeAllCodes(StringBuilder buff, int initialPosition) throws NotFoundException, FormatException {
+  String decodeAllCodes(StringBuilder buff, int initialPosition) throws NotFoundException {
     int currentPosition = initialPosition;
     String remaining = null;
     do{
@@ -84,7 +83,7 @@ final class GeneralAppIdDecoder {
     return this.information.get(pos + 3);
   }
 
-  private DecodedNumeric decodeNumeric(int pos) throws FormatException {
+  private DecodedNumeric decodeNumeric(int pos) {
     if(pos + 7 > this.information.getSize()){
       int numeric = extractNumericValueFromBitArray(pos, 4);
       if(numeric == 0) {
@@ -105,6 +104,10 @@ final class GeneralAppIdDecoder {
   }
 
   static int extractNumericValueFromBitArray(BitArray information, int pos, int bits) {
+    if(bits > 32) {
+      throw new IllegalArgumentException("extractNumberValueFromBitArray can't handle more than 32 bits");
+    }
+
     int value = 0;
     for (int i = 0; i < bits; ++i) {
       if (information.get(pos + i)) {
@@ -115,7 +118,7 @@ final class GeneralAppIdDecoder {
     return value;
   }
 
-  DecodedInformation decodeGeneralPurposeField(int pos, String remaining) throws FormatException {
+  DecodedInformation decodeGeneralPurposeField(int pos, String remaining) {
     this.buffer.setLength(0);
 
     if(remaining != null) {
@@ -131,7 +134,7 @@ final class GeneralAppIdDecoder {
     return new DecodedInformation(this.current.getPosition(), this.buffer.toString());
   }
 
-  private DecodedInformation parseBlocks() throws FormatException {
+  private DecodedInformation parseBlocks() {
     boolean isFinished;
     BlockParsedResult result;
     do{
@@ -157,7 +160,7 @@ final class GeneralAppIdDecoder {
     return result.getDecodedInformation();
   }
 
-  private BlockParsedResult parseNumericBlock() throws FormatException {
+  private BlockParsedResult parseNumericBlock() {
     while (isStillNumeric(current.getPosition())) {
       DecodedNumeric numeric = decodeNumeric(current.getPosition());
       current.setPosition(numeric.getNewPosition());
@@ -187,7 +190,7 @@ final class GeneralAppIdDecoder {
     return new BlockParsedResult(false);
   }
 
-  private BlockParsedResult parseIsoIec646Block() throws FormatException {
+  private BlockParsedResult parseIsoIec646Block() {
     while (isStillIsoIec646(current.getPosition())) {
       DecodedChar iso = decodeIsoIec646(current.getPosition());
       current.setPosition(iso.getNewPosition());
@@ -270,7 +273,7 @@ final class GeneralAppIdDecoder {
 
   }
 
-  private DecodedChar decodeIsoIec646(int pos) throws FormatException {
+  private DecodedChar decodeIsoIec646(int pos) {
     int fiveBitValue = extractNumericValueFromBitArray(pos, 5);
     if (fiveBitValue == 15) {
       return new DecodedChar(pos + 5, DecodedChar.FNC1);
@@ -357,7 +360,7 @@ final class GeneralAppIdDecoder {
         c = ' ';
         break;
       default:
-        throw FormatException.getFormatInstance();
+        throw new IllegalArgumentException("Decoding invalid ISO/IEC 646 value: " + eightBitValue);
     }
     return new DecodedChar(pos + 8, c);
   }

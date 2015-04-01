@@ -30,7 +30,6 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.common.DecoderResult;
 import com.google.zxing.common.DetectorResult;
 import com.google.zxing.qrcode.decoder.Decoder;
-import com.google.zxing.qrcode.decoder.QRCodeDecoderMetaData;
 import com.google.zxing.qrcode.detector.Detector;
 
 import java.util.List;
@@ -47,7 +46,7 @@ public class QRCodeReader implements Reader {
 
   private final Decoder decoder = new Decoder();
 
-  protected final Decoder getDecoder() {
+  protected Decoder getDecoder() {
     return decoder;
   }
 
@@ -65,7 +64,7 @@ public class QRCodeReader implements Reader {
   }
 
   @Override
-  public final Result decode(BinaryBitmap image, Map<DecodeHintType,?> hints)
+  public Result decode(BinaryBitmap image, Map<DecodeHintType,?> hints)
       throws NotFoundException, ChecksumException, FormatException {
     DecoderResult decoderResult;
     ResultPoint[] points;
@@ -79,11 +78,6 @@ public class QRCodeReader implements Reader {
       points = detectorResult.getPoints();
     }
 
-    // If the code was mirrored: swap the bottom-left and the top-right points.
-    if (decoderResult.getOther() instanceof QRCodeDecoderMetaData) {
-      ((QRCodeDecoderMetaData) decoderResult.getOther()).applyMirroredCorrection(points);
-    }
-
     Result result = new Result(decoderResult.getText(), decoderResult.getRawBytes(), points, BarcodeFormat.QR_CODE);
     List<byte[]> byteSegments = decoderResult.getByteSegments();
     if (byteSegments != null) {
@@ -92,12 +86,6 @@ public class QRCodeReader implements Reader {
     String ecLevel = decoderResult.getECLevel();
     if (ecLevel != null) {
       result.putMetadata(ResultMetadataType.ERROR_CORRECTION_LEVEL, ecLevel);
-    }
-    if (decoderResult.hasStructuredAppend()) {
-      result.putMetadata(ResultMetadataType.STRUCTURED_APPEND_SEQUENCE,
-                         decoderResult.getStructuredAppendSequenceNumber());
-      result.putMetadata(ResultMetadataType.STRUCTURED_APPEND_PARITY,
-                         decoderResult.getStructuredAppendParity());
     }
     return result;
   }
@@ -113,6 +101,7 @@ public class QRCodeReader implements Reader {
    * around it. This is a specialized method that works exceptionally fast in this special
    * case.
    *
+   * @see com.google.zxing.pdf417.PDF417Reader#extractPureBits(BitMatrix)
    * @see com.google.zxing.datamatrix.DataMatrixReader#extractPureBits(BitMatrix)
    */
   private static BitMatrix extractPureBits(BitMatrix image) throws NotFoundException {
@@ -129,11 +118,6 @@ public class QRCodeReader implements Reader {
     int bottom = rightBottomBlack[1];
     int left = leftTopBlack[0];
     int right = rightBottomBlack[0];
-    
-    // Sanity check!
-    if (left >= right || top >= bottom) {
-      throw NotFoundException.getNotFoundInstance();
-    }
 
     if (bottom - top != right - left) {
       // Special case, where bottom-right module wasn't black so we found something else in the last row
@@ -157,27 +141,6 @@ public class QRCodeReader implements Reader {
     int nudge = (int) (moduleSize / 2.0f);
     top += nudge;
     left += nudge;
-    
-    // But careful that this does not sample off the edge
-    // "right" is the farthest-right valid pixel location -- right+1 is not necessarily
-    // This is positive by how much the inner x loop below would be too large
-    int nudgedTooFarRight = left + (int) ((matrixWidth - 1) * moduleSize) - right;
-    if (nudgedTooFarRight > 0) {
-      if (nudgedTooFarRight > nudge) {
-        // Neither way fits; abort
-        throw NotFoundException.getNotFoundInstance();
-      }
-      left -= nudgedTooFarRight;
-    }
-    // See logic above
-    int nudgedTooFarDown = top + (int) ((matrixHeight - 1) * moduleSize) - bottom;
-    if (nudgedTooFarDown > 0) {
-      if (nudgedTooFarDown > nudge) {
-        // Neither way fits; abort
-        throw NotFoundException.getNotFoundInstance();
-      }
-      top -= nudgedTooFarDown;
-    }
 
     // Now just read off the bits
     BitMatrix bits = new BitMatrix(matrixWidth, matrixHeight);

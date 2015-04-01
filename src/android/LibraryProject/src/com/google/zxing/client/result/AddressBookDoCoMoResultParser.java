@@ -52,18 +52,17 @@ public final class AddressBookDoCoMoResultParser extends AbstractDoCoMoResultPar
     String note = matchSingleDoCoMoPrefixedField("NOTE:", rawText, false);
     String[] addresses = matchDoCoMoPrefixedField("ADR:", rawText, true);
     String birthday = matchSingleDoCoMoPrefixedField("BDAY:", rawText, true);
-    if (!isStringOfDigits(birthday, 8)) {
+    if (birthday != null && !isStringOfDigits(birthday, 8)) {
       // No reason to throw out the whole card because the birthday is formatted wrong.
       birthday = null;
     }
-    String[] urls = matchDoCoMoPrefixedField("URL:", rawText, true);
+    String url = matchSingleDoCoMoPrefixedField("URL:", rawText, true);
 
     // Although ORG may not be strictly legal in MECARD, it does exist in VCARD and we might as well
     // honor it when found in the wild.
     String org = matchSingleDoCoMoPrefixedField("ORG:", rawText, true);
 
     return new AddressBookParsedResult(maybeWrap(name),
-                                       null,
                                        pronunciation,
                                        phoneNumbers,
                                        null,
@@ -76,8 +75,7 @@ public final class AddressBookDoCoMoResultParser extends AbstractDoCoMoResultPar
                                        org,
                                        birthday,
                                        null,
-                                       urls,
-                                       null);
+                                       url);
   }
 
   private static String parseName(String name) {

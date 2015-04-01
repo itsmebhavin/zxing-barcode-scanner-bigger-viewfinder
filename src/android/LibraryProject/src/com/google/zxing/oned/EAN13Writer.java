@@ -60,7 +60,7 @@ public final class EAN13Writer extends UPCEANWriter {
       if (!UPCEANReader.checkStandardUPCEANChecksum(contents)) {
         throw new IllegalArgumentException("Contents do not pass checksum");
       }
-    } catch (FormatException ignored) {
+    } catch (FormatException fe) {
       throw new IllegalArgumentException("Illegal contents");
     }
 
@@ -86,7 +86,7 @@ public final class EAN13Writer extends UPCEANWriter {
       int digit = Integer.parseInt(contents.substring(i, i + 1));
       pos += appendPattern(result, pos, UPCEANReader.L_PATTERNS[digit], true);
     }
-    appendPattern(result, pos, UPCEANReader.START_END_PATTERN, true);
+    pos += appendPattern(result, pos, UPCEANReader.START_END_PATTERN, true);
 
     return result;
   }

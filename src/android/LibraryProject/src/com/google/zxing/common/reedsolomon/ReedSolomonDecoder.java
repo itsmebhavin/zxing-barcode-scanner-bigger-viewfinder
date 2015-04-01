@@ -58,9 +58,11 @@ public final class ReedSolomonDecoder {
   public void decode(int[] received, int twoS) throws ReedSolomonException {
     GenericGFPoly poly = new GenericGFPoly(field, received);
     int[] syndromeCoefficients = new int[twoS];
+    boolean dataMatrix = field.equals(GenericGF.DATA_MATRIX_FIELD_256);
     boolean noError = true;
     for (int i = 0; i < twoS; i++) {
-      int eval = poly.evaluateAt(field.exp(i + field.getGeneratorBase()));
+      // Thanks to sanfordsquires for this fix:
+      int eval = poly.evaluateAt(field.exp(dataMatrix ? i + 1 : i));
       syndromeCoefficients[syndromeCoefficients.length - 1 - i] = eval;
       if (eval != 0) {
         noError = false;
@@ -75,7 +77,7 @@ public final class ReedSolomonDecoder {
     GenericGFPoly sigma = sigmaOmega[0];
     GenericGFPoly omega = sigmaOmega[1];
     int[] errorLocations = findErrorLocations(sigma);
-    int[] errorMagnitudes = findErrorMagnitudes(omega, errorLocations);
+    int[] errorMagnitudes = findErrorMagnitudes(omega, errorLocations, dataMatrix);
     for (int i = 0; i < errorLocations.length; i++) {
       int position = received.length - 1 - field.log(errorLocations[i]);
       if (position < 0) {
@@ -123,10 +125,6 @@ public final class ReedSolomonDecoder {
       }
 
       t = q.multiply(tLast).addOrSubtract(tLastLast);
-      
-      if (r.getDegree() >= rLast.getDegree()) {
-        throw new IllegalStateException("Division algorithm failed to reduce polynomial?");
-      }
     }
 
     int sigmaTildeAtZero = t.getCoefficient(0);
@@ -160,7 +158,9 @@ public final class ReedSolomonDecoder {
     return result;
   }
 
-  private int[] findErrorMagnitudes(GenericGFPoly errorEvaluator, int[] errorLocations) {
+  private int[] findErrorMagnitudes(GenericGFPoly errorEvaluator,
+                                    int[] errorLocations,
+                                    boolean dataMatrix) {
     // This is directly applying Forney's Formula
     int s = errorLocations.length;
     int[] result = new int[s];
@@ -180,7 +180,8 @@ public final class ReedSolomonDecoder {
       }
       result[i] = field.multiply(errorEvaluator.evaluateAt(xiInverse),
           field.inverse(denominator));
-      if (field.getGeneratorBase() != 0) {
+      // Thanks to sanfordsquires for this fix:
+      if (dataMatrix) {
         result[i] = field.multiply(result[i], xiInverse);
       }
     }

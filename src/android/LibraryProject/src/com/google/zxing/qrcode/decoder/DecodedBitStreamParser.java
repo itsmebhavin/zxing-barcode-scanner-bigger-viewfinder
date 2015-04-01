@@ -59,80 +59,73 @@ final class DecodedBitStreamParser {
                               Map<DecodeHintType,?> hints) throws FormatException {
     BitSource bits = new BitSource(bytes);
     StringBuilder result = new StringBuilder(50);
-    List<byte[]> byteSegments = new ArrayList<>(1);
-    int symbolSequence = -1;
-    int parityData = -1;
-    
-    try {
-      CharacterSetECI currentCharacterSetECI = null;
-      boolean fc1InEffect = false;
-      Mode mode;
-      do {
-        // While still another segment to read...
-        if (bits.available() < 4) {
-          // OK, assume we're done. Really, a TERMINATOR mode should have been recorded here
-          mode = Mode.TERMINATOR;
-        } else {
+    CharacterSetECI currentCharacterSetECI = null;
+    boolean fc1InEffect = false;
+    List<byte[]> byteSegments = new ArrayList<byte[]>(1);
+    Mode mode;
+    do {
+      // While still another segment to read...
+      if (bits.available() < 4) {
+        // OK, assume we're done. Really, a TERMINATOR mode should have been recorded here
+        mode = Mode.TERMINATOR;
+      } else {
+        try {
           mode = Mode.forBits(bits.readBits(4)); // mode is encoded by 4 bits
+        } catch (IllegalArgumentException iae) {
+          throw FormatException.getFormatInstance();
         }
-        if (mode != Mode.TERMINATOR) {
-          if (mode == Mode.FNC1_FIRST_POSITION || mode == Mode.FNC1_SECOND_POSITION) {
-            // We do little with FNC1 except alter the parsed result a bit according to the spec
-            fc1InEffect = true;
-          } else if (mode == Mode.STRUCTURED_APPEND) {
-            if (bits.available() < 16) {
-              throw FormatException.getFormatInstance();
-            }
-            // sequence number and parity is added later to the result metadata
-            // Read next 8 bits (symbol sequence #) and 8 bits (parity data), then continue
-            symbolSequence = bits.readBits(8);
-            parityData = bits.readBits(8);
-          } else if (mode == Mode.ECI) {
-            // Count doesn't apply to ECI
-            int value = parseECIValue(bits);
-            currentCharacterSetECI = CharacterSetECI.getCharacterSetECIByValue(value);
-            if (currentCharacterSetECI == null) {
-              throw FormatException.getFormatInstance();
+      }
+      if (mode != Mode.TERMINATOR) {
+        if (mode == Mode.FNC1_FIRST_POSITION || mode == Mode.FNC1_SECOND_POSITION) {
+          // We do little with FNC1 except alter the parsed result a bit according to the spec
+          fc1InEffect = true;
+        } else if (mode == Mode.STRUCTURED_APPEND) {
+          if (bits.available() < 16) {
+            throw FormatException.getFormatInstance();
+          }
+          // not really supported; all we do is ignore it
+          // Read next 8 bits (symbol sequence #) and 8 bits (parity data), then continue
+          bits.readBits(16);
+        } else if (mode == Mode.ECI) {
+          // Count doesn't apply to ECI
+          int value = parseECIValue(bits);
+          currentCharacterSetECI = CharacterSetECI.getCharacterSetECIByValue(value);
+          if (currentCharacterSetECI == null) {
+            throw FormatException.getFormatInstance();
+          }
+        } else {
+          // First handle Hanzi mode which does not start with character count
+          if (mode == Mode.HANZI) {
+            //chinese mode contains a sub set indicator right after mode indicator
+            int subset = bits.readBits(4);
+            int countHanzi = bits.readBits(mode.getCharacterCountBits(version));
+            if (subset == GB2312_SUBSET) {
+              decodeHanziSegment(bits, result, countHanzi);
             }
           } else {
-            // First handle Hanzi mode which does not start with character count
-            if (mode == Mode.HANZI) {
-              //chinese mode contains a sub set indicator right after mode indicator
-              int subset = bits.readBits(4);
-              int countHanzi = bits.readBits(mode.getCharacterCountBits(version));
-              if (subset == GB2312_SUBSET) {
-                decodeHanziSegment(bits, result, countHanzi);
-              }
+            // "Normal" QR code modes:
+            // How many characters will follow, encoded in this mode?
+            int count = bits.readBits(mode.getCharacterCountBits(version));
+            if (mode == Mode.NUMERIC) {
+              decodeNumericSegment(bits, result, count);
+            } else if (mode == Mode.ALPHANUMERIC) {
+              decodeAlphanumericSegment(bits, result, count, fc1InEffect);
+            } else if (mode == Mode.BYTE) {
+              decodeByteSegment(bits, result, count, currentCharacterSetECI, byteSegments, hints);
+            } else if (mode == Mode.KANJI) {
+              decodeKanjiSegment(bits, result, count);
             } else {
-              // "Normal" QR code modes:
-              // How many characters will follow, encoded in this mode?
-              int count = bits.readBits(mode.getCharacterCountBits(version));
-              if (mode == Mode.NUMERIC) {
-                decodeNumericSegment(bits, result, count);
-              } else if (mode == Mode.ALPHANUMERIC) {
-                decodeAlphanumericSegment(bits, result, count, fc1InEffect);
-              } else if (mode == Mode.BYTE) {
-                decodeByteSegment(bits, result, count, currentCharacterSetECI, byteSegments, hints);
-              } else if (mode == Mode.KANJI) {
-                decodeKanjiSegment(bits, result, count);
-              } else {
-                throw FormatException.getFormatInstance();
-              }
+              throw FormatException.getFormatInstance();
             }
           }
         }
-      } while (mode != Mode.TERMINATOR);
-    } catch (IllegalArgumentException iae) {
-      // from readBits() calls
-      throw FormatException.getFormatInstance();
-    }
+      }
+    } while (mode != Mode.TERMINATOR);
 
     return new DecoderResult(bytes,
                              result.toString(),
                              byteSegments.isEmpty() ? null : byteSegments,
-                             ecLevel == null ? null : ecLevel.toString(),
-                             symbolSequence,
-                             parityData);
+                             ecLevel == null ? null : ecLevel.toString());
   }
 
   /**
@@ -169,7 +162,7 @@ final class DecodedBitStreamParser {
 
     try {
       result.append(new String(buffer, StringUtils.GB2312));
-    } catch (UnsupportedEncodingException ignored) {
+    } catch (UnsupportedEncodingException uee) {
       throw FormatException.getFormatInstance();
     }
   }
@@ -205,7 +198,7 @@ final class DecodedBitStreamParser {
     // Shift_JIS may not be supported in some environments:
     try {
       result.append(new String(buffer, StringUtils.SHIFT_JIS));
-    } catch (UnsupportedEncodingException ignored) {
+    } catch (UnsupportedEncodingException uee) {
       throw FormatException.getFormatInstance();
     }
   }
@@ -217,7 +210,7 @@ final class DecodedBitStreamParser {
                                         Collection<byte[]> byteSegments,
                                         Map<DecodeHintType,?> hints) throws FormatException {
     // Don't crash trying to read more bits than we have available.
-    if (8 * count > bits.available()) {
+    if (count << 3 > bits.available()) {
       throw FormatException.getFormatInstance();
     }
 
@@ -238,7 +231,7 @@ final class DecodedBitStreamParser {
     }
     try {
       result.append(new String(readBytes, encoding));
-    } catch (UnsupportedEncodingException ignored) {
+    } catch (UnsupportedEncodingException uce) {
       throw FormatException.getFormatInstance();
     }
     byteSegments.add(readBytes);

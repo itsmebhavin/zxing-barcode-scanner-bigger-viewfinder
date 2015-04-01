@@ -16,21 +16,16 @@
 
 package com.google.zxing.client.android.share;
 
-import android.app.ListActivity;
 import android.content.pm.ApplicationInfo;
-import android.content.pm.PackageItemInfo;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
-import android.view.View;
-import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.ImageView;
 import android.widget.ListAdapter;
-import com.google.zxing.client.android.R;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -38,7 +33,7 @@ import java.util.List;
  *
  * @author Sean Owen
  */
-final class LoadPackagesAsyncTask extends AsyncTask<Object,Object,List<AppInfo>> {
+final class LoadPackagesAsyncTask extends AsyncTask<List<String[]>,Object,List<String[]>> {
 
   private static final String[] PKG_PREFIX_WHITELIST = {
       "com.google.android.apps.",
@@ -50,28 +45,27 @@ final class LoadPackagesAsyncTask extends AsyncTask<Object,Object,List<AppInfo>>
       "com.htc",
   };
 
-  private final ListActivity activity;
+  private final AppPickerActivity activity;
 
-  LoadPackagesAsyncTask(ListActivity activity) {
+  LoadPackagesAsyncTask(AppPickerActivity activity) {
     this.activity = activity;
   }
 
   @Override
-  protected List<AppInfo> doInBackground(Object... objects) {
-    List<AppInfo> labelsPackages = new ArrayList<>();
+  protected List<String[]> doInBackground(List<String[]>... objects) {
+    List<String[]> labelsPackages = objects[0];
     PackageManager packageManager = activity.getPackageManager();
-    Iterable<ApplicationInfo> appInfos = packageManager.getInstalledApplications(0);
-    for (PackageItemInfo appInfo : appInfos) {
-      String packageName = appInfo.packageName;
-      if (!isHidden(packageName)) {
-        CharSequence label = appInfo.loadLabel(packageManager);
-        Drawable icon = appInfo.loadIcon(packageManager);        
-        if (label != null) {
-          labelsPackages.add(new AppInfo(packageName, label.toString(), icon));
+    List<ApplicationInfo> appInfos = packageManager.getInstalledApplications(0);
+    for (ApplicationInfo appInfo : appInfos) {
+      CharSequence label = appInfo.loadLabel(packageManager);
+      if (label != null) {
+        String packageName = appInfo.packageName;
+        if (!isHidden(packageName)) {
+          labelsPackages.add(new String[]{label.toString(), packageName});
         }
       }
     }
-    Collections.sort(labelsPackages);
+    Collections.sort(labelsPackages, new ByFirstStringComparator());
     return labelsPackages;
   }
 
@@ -93,22 +87,21 @@ final class LoadPackagesAsyncTask extends AsyncTask<Object,Object,List<AppInfo>>
   }
 
   @Override
-  protected void onPostExecute(final List<AppInfo> results) {    
-    ListAdapter listAdapter = new ArrayAdapter<AppInfo>(activity, 
-                                                        R.layout.app_picker_list_item, 
-                                                        R.id.app_picker_list_item_label, 
-                                                        results) {
-      @Override
-      public View getView(int position, View convertView, ViewGroup parent) {
-        View view = super.getView(position, convertView, parent);
-        Drawable icon = results.get(position).getIcon();
-        if (icon != null) {
-          ((ImageView) view.findViewById(R.id.app_picker_list_item_icon)).setImageDrawable(icon);
-        }
-        return view;
-      }
-    };
+  protected synchronized void onPostExecute(List<String[]> results) {
+    List<String> labels = new ArrayList<String>(results.size());
+    for (String[] result : results) {
+      labels.add(result[0]);
+    }
+    ListAdapter listAdapter = new ArrayAdapter<String>(activity,
+        android.R.layout.simple_list_item_1, labels);
     activity.setListAdapter(listAdapter);
+  }
+
+  private static class ByFirstStringComparator implements Comparator<String[]>, Serializable {
+    @Override
+    public int compare(String[] o1, String[] o2) {
+      return o1[0].compareTo(o2[0]);
+    }
   }
 
 }

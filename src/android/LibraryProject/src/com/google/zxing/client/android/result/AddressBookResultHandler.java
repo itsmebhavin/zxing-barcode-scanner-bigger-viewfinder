@@ -51,12 +51,7 @@ public final class AddressBookResultHandler extends ResultHandler {
     }
   }
 
-  private static final int[] BUTTON_TEXTS = {
-    R.string.button_add_contact,
-    R.string.button_show_map,
-    R.string.button_dial,
-    R.string.button_email,
-  };
+  private static int[] BUTTON_TEXTS;
 
   private final boolean[] fields;
   private int buttonCount;
@@ -80,9 +75,15 @@ public final class AddressBookResultHandler extends ResultHandler {
 
   public AddressBookResultHandler(Activity activity, ParsedResult result) {
     super(activity, result);
+	BUTTON_TEXTS = new int[]{
+      fakeR.getId("string", "button_add_contact"),
+      fakeR.getId("string", "button_show_map"),
+      fakeR.getId("string", "button_dial"),
+      fakeR.getId("string", "button_email"),
+    };
     AddressBookParsedResult addressResult = (AddressBookParsedResult) result;
     String[] addresses = addressResult.getAddresses();
-    boolean hasAddress = addresses != null && addresses.length > 0 && addresses[0] != null && !addresses[0].isEmpty();
+    boolean hasAddress = addresses != null && addresses.length > 0 && addresses[0].length() > 0;
     String[] phoneNumbers = addressResult.getPhoneNumbers();
     boolean hasPhoneNumber = phoneNumbers != null && phoneNumbers.length > 0;
     String[] emails = addressResult.getEmails();
@@ -123,7 +124,6 @@ public final class AddressBookResultHandler extends ResultHandler {
     switch (action) {
       case 0:
         addContact(addressResult.getNames(),
-                   addressResult.getNicknames(),
                    addressResult.getPronunciation(),
                    addressResult.getPhoneNumbers(),
                    addressResult.getPhoneTypes(),
@@ -135,18 +135,19 @@ public final class AddressBookResultHandler extends ResultHandler {
                    address1Type,
                    addressResult.getOrg(),
                    addressResult.getTitle(),
-                   addressResult.getURLs(),
-                   addressResult.getBirthday(),
-                   addressResult.getGeo());
+                   addressResult.getURL(),
+                   addressResult.getBirthday());
         break;
       case 1:
-        searchMap(address1);
+        String[] names = addressResult.getNames();
+        String title = names != null ? names[0] : null;
+        searchMap(address1, title);
         break;
       case 2:
         dialPhone(addressResult.getPhoneNumbers()[0]);
         break;
       case 3:
-        sendEmail(addressResult.getEmails(), null, null, null, null);
+        sendEmail(addressResult.getEmails()[0], null, null);
         break;
       default:
         break;
@@ -173,7 +174,7 @@ public final class AddressBookResultHandler extends ResultHandler {
     int namesLength = contents.length();
 
     String pronunciation = result.getPronunciation();
-    if (pronunciation != null && !pronunciation.isEmpty()) {
+    if (pronunciation != null && pronunciation.length() > 0) {
       contents.append("\n(");
       contents.append(pronunciation);
       contents.append(')');
@@ -185,16 +186,14 @@ public final class AddressBookResultHandler extends ResultHandler {
     String[] numbers = result.getPhoneNumbers();
     if (numbers != null) {
       for (String number : numbers) {
-        if (number != null) {
-          ParsedResult.maybeAppend(PhoneNumberUtils.formatNumber(number), contents);
-        }
+        ParsedResult.maybeAppend(PhoneNumberUtils.formatNumber(number), contents);
       }
     }
     ParsedResult.maybeAppend(result.getEmails(), contents);
-    ParsedResult.maybeAppend(result.getURLs(), contents);
+    ParsedResult.maybeAppend(result.getURL(), contents);
 
     String birthday = result.getBirthday();
-    if (birthday != null && !birthday.isEmpty()) {
+    if (birthday != null && birthday.length() > 0) {
       Date date = parseDate(birthday);
       if (date != null) {
         ParsedResult.maybeAppend(DateFormat.getDateInstance(DateFormat.MEDIUM).format(date.getTime()), contents);
@@ -214,6 +213,6 @@ public final class AddressBookResultHandler extends ResultHandler {
 
   @Override
   public int getDisplayTitle() {
-    return R.string.result_address_book;
+    return fakeR.getId("string", "result_address_book");
   }
 }

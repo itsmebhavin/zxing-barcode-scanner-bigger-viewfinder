@@ -62,11 +62,15 @@ public final class Encoder {
   }
 
   /**
-   * @param content text to encode
-   * @param ecLevel error correction level to use
-   * @return {@link QRCode} representing the encoded QR code
-   * @throws WriterException if encoding can't succeed, because of for example invalid content
-   *   or configuration
+   *  Encode "bytes" with the error correction level "ecLevel". The encoding mode will be chosen
+   * internally by chooseMode(). On success, store the result in "qrCode".
+   *
+   * We recommend you to use QRCode.EC_LEVEL_L (the lowest level) for
+   * "getECLevel" since our primary use is to show QR code on desktop screens. We don't need very
+   * strong error correction for this purpose.
+   *
+   * Note that there is no way to encode bytes in MODE_KANJI. We might want to add EncodeWithMode()
+   * with which clients can specify the encoding mode. For now, we don't need the functionality.
    */
   public static QRCode encode(String content, ErrorCorrectionLevel ecLevel) throws WriterException {
     return encode(content, ecLevel, null);
@@ -210,7 +214,7 @@ public final class Encoder {
     byte[] bytes;
     try {
       bytes = content.getBytes("Shift_JIS");
-    } catch (UnsupportedEncodingException ignored) {
+    } catch (UnsupportedEncodingException uee) {
       return false;
     }
     int length = bytes.length;
@@ -268,7 +272,7 @@ public final class Encoder {
    * Terminate bits as described in 8.4.8 and 8.4.9 of JISX0510:2004 (p.24).
    */
   static void terminateBits(int numDataBytes, BitArray bits) throws WriterException {
-    int capacity = numDataBytes * 8;
+    int capacity = numDataBytes << 3;
     if (bits.getSize() > capacity) {
       throw new WriterException("data bits cannot fit in the QR Code" + bits.getSize() + " > " +
           capacity);
@@ -372,7 +376,7 @@ public final class Encoder {
     int maxNumEcBytes = 0;
 
     // Since, we know the number of reedsolmon blocks, we can initialize the vector with the number.
-    Collection<BlockPair> blocks = new ArrayList<>(numRSBlocks);
+    Collection<BlockPair> blocks = new ArrayList<BlockPair>(numRSBlocks);
 
     for (int i = 0; i < numRSBlocks; ++i) {
       int[] numDataBytesInBlock = new int[1];

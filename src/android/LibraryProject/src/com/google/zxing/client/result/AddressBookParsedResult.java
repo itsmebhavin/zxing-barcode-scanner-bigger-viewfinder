@@ -22,7 +22,6 @@ package com.google.zxing.client.result;
 public final class AddressBookParsedResult extends ParsedResult {
 
   private final String[] names;
-  private final String[] nicknames;
   private final String pronunciation;
   private final String[] phoneNumbers;
   private final String[] phoneTypes;
@@ -35,36 +34,9 @@ public final class AddressBookParsedResult extends ParsedResult {
   private final String org;
   private final String birthday;
   private final String title;
-  private final String[] urls;
-  private final String[] geo;
+  private final String url;
 
   public AddressBookParsedResult(String[] names,
-                                 String[] phoneNumbers,
-                                 String[] phoneTypes,
-                                 String[] emails,
-                                 String[] emailTypes,
-                                 String[] addresses,
-                                 String[] addressTypes) {
-    this(names,
-         null,
-         null,
-         phoneNumbers,
-         phoneTypes,
-         emails,
-         emailTypes,
-         null,
-         null,
-         addresses,
-         addressTypes,
-         null,
-         null,
-         null,
-         null,
-         null);
-  }
-
-  public AddressBookParsedResult(String[] names,
-                                 String[] nicknames,
                                  String pronunciation,
                                  String[] phoneNumbers,
                                  String[] phoneTypes,
@@ -77,11 +49,9 @@ public final class AddressBookParsedResult extends ParsedResult {
                                  String org,
                                  String birthday,
                                  String title,
-                                 String[] urls,
-                                 String[] geo) {
+                                 String url) {
     super(ParsedResultType.ADDRESSBOOK);
     this.names = names;
-    this.nicknames = nicknames;
     this.pronunciation = pronunciation;
     this.phoneNumbers = phoneNumbers;
     this.phoneTypes = phoneTypes;
@@ -94,16 +64,11 @@ public final class AddressBookParsedResult extends ParsedResult {
     this.org = org;
     this.birthday = birthday;
     this.title = title;
-    this.urls = urls;
-    this.geo = geo;
+    this.url = url;
   }
 
   public String[] getNames() {
     return names;
-  }
-
-  public String[] getNicknames() {
-    return nicknames;
   }
 
   /**
@@ -168,8 +133,8 @@ public final class AddressBookParsedResult extends ParsedResult {
     return org;
   }
 
-  public String[] getURLs() {
-    return urls;
+  public String getURL() {
+    return url;
   }
 
   /**
@@ -179,18 +144,10 @@ public final class AddressBookParsedResult extends ParsedResult {
     return birthday;
   }
 
-  /**
-   * @return a location as a latitude/longitude pair
-   */
-  public String[] getGeo() {
-    return geo;
-  }
-
   @Override
   public String getDisplayResult() {
     StringBuilder result = new StringBuilder(100);
     maybeAppend(names, result);
-    maybeAppend(nicknames, result);
     maybeAppend(pronunciation, result);
     maybeAppend(title, result);
     maybeAppend(org, result);
@@ -198,9 +155,8 @@ public final class AddressBookParsedResult extends ParsedResult {
     maybeAppend(phoneNumbers, result);
     maybeAppend(emails, result);
     maybeAppend(instantMessenger, result);
-    maybeAppend(urls, result);
+    maybeAppend(url, result);
     maybeAppend(birthday, result);
-    maybeAppend(geo, result);
     maybeAppend(note, result);
     return result.toString();
   }

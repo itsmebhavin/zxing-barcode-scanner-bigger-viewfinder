@@ -16,7 +16,7 @@
 
 package com.google.zxing.client.android.history;
 
-import android.content.Context;
+import android.app.Activity;
 import android.content.res.Resources;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,6 +24,7 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.google.zxing.FakeR;
 import com.google.zxing.Result;
 import com.google.zxing.client.android.R;
 
@@ -31,39 +32,41 @@ import java.util.ArrayList;
 
 final class HistoryItemAdapter extends ArrayAdapter<HistoryItem> {
 
-  private final Context activity;
+  private final Activity activity;
 
-  HistoryItemAdapter(Context activity) {
-    super(activity, R.layout.history_list_item, new ArrayList<HistoryItem>());
+  private static FakeR fakeR;
+  HistoryItemAdapter(Activity activity) {
+    super(activity, activity.getApplicationContext().getResources().getIdentifier("history_list_item", "layout", activity.getApplicationContext().getPackageName()), new ArrayList<HistoryItem>());
+	fakeR = new FakeR(activity);
     this.activity = activity;
   }
 
   @Override
   public View getView(int position, View view, ViewGroup viewGroup) {
-    View layout;
+    LinearLayout layout;
     if (view instanceof LinearLayout) {
-      layout = view;
+      layout = (LinearLayout) view;
     } else {
       LayoutInflater factory = LayoutInflater.from(activity);
-      layout = factory.inflate(R.layout.history_list_item, viewGroup, false);
+      layout = (LinearLayout) factory.inflate(fakeR.getId("layout", "history_list_item"), viewGroup, false);
     }
 
     HistoryItem item = getItem(position);
     Result result = item.getResult();
 
-    CharSequence title;
-    CharSequence detail;
+    String title;
+    String detail;
     if (result != null) {
       title = result.getText();
       detail = item.getDisplayAndDetails();      
     } else {
       Resources resources = getContext().getResources();
-      title = resources.getString(R.string.history_empty);
-      detail = resources.getString(R.string.history_empty_detail);
+      title = resources.getString(fakeR.getId("string", "history_empty"));
+      detail = resources.getString(fakeR.getId("string", "history_empty_detail"));
     }
 
-    ((TextView) layout.findViewById(R.id.history_title)).setText(title);    
-    ((TextView) layout.findViewById(R.id.history_detail)).setText(detail);
+    ((TextView) layout.findViewById(fakeR.getId("id", "history_title"))).setText(title);    
+    ((TextView) layout.findViewById(fakeR.getId("id", "history_detail"))).setText(detail);
 
     return layout;
   }

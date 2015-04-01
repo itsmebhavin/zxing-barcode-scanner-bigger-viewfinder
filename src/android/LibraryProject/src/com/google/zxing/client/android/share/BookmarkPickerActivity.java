@@ -19,6 +19,7 @@ package com.google.zxing.client.android.share;
 import android.app.ListActivity;
 import android.content.Intent;
 import android.database.Cursor;
+import android.os.Bundle;
 import android.provider.Browser;
 import android.util.Log;
 import android.view.View;
@@ -42,31 +43,24 @@ public final class BookmarkPickerActivity extends ListActivity {
   static final int TITLE_COLUMN = 0;
   static final int URL_COLUMN = 1;
 
-  private static final String BOOKMARK_SELECTION = 
-      Browser.BookmarkColumns.BOOKMARK + " = 1 AND " + Browser.BookmarkColumns.URL + " IS NOT NULL";
+  // Without this selection, we'd get all the history entries too
+  private static final String BOOKMARK_SELECTION = "bookmark = 1";
 
-  private Cursor cursor;
+  private Cursor cursor = null;
 
   @Override
-  protected void onResume() {
-    super.onResume();
+  protected void onCreate(Bundle icicle) {
+    super.onCreate(icicle);
+
     cursor = getContentResolver().query(Browser.BOOKMARKS_URI, BOOKMARK_PROJECTION,
         BOOKMARK_SELECTION, null, null);
     if (cursor == null) {
       Log.w(TAG, "No cursor returned for bookmark query");
       finish();
-      return;
+    } else {
+      startManagingCursor(cursor);
+      setListAdapter(new BookmarkAdapter(this, cursor));
     }
-    setListAdapter(new BookmarkAdapter(this, cursor));
-  }
-  
-  @Override
-  protected void onPause() {
-    if (cursor != null) {
-      cursor.close();
-      cursor = null;
-    }
-    super.onPause();
   }
 
   @Override

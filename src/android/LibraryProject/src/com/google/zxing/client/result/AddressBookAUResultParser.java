@@ -50,7 +50,6 @@ public final class AddressBookAUResultParser extends ResultParser {
     String address = matchSinglePrefixedField("ADD:", rawText, '\r', true);
     String[] addresses = address == null ? null : new String[] {address};
     return new AddressBookParsedResult(maybeWrap(name),
-                                       null,
                                        pronunciation,
                                        phoneNumbers,
                                        null,
@@ -59,7 +58,6 @@ public final class AddressBookAUResultParser extends ResultParser {
                                        null,
                                        note,
                                        addresses,
-                                       null,
                                        null,
                                        null,
                                        null,
@@ -78,7 +76,7 @@ public final class AddressBookAUResultParser extends ResultParser {
         break;
       }
       if (values == null) {
-        values = new ArrayList<>(max); // lazy init
+        values = new ArrayList<String>(max); // lazy init
       }
       values.add(value);
     }

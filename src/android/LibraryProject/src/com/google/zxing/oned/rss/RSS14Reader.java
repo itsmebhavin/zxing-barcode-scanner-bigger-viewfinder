@@ -57,8 +57,8 @@ public final class RSS14Reader extends AbstractRSSReader {
   private final List<Pair> possibleRightPairs;
 
   public RSS14Reader() {
-    possibleLeftPairs = new ArrayList<>();
-    possibleRightPairs = new ArrayList<>();
+    possibleLeftPairs = new ArrayList<Pair>();
+    possibleRightPairs = new ArrayList<Pair>();
   }
 
   @Override
@@ -71,13 +71,9 @@ public final class RSS14Reader extends AbstractRSSReader {
     Pair rightPair = decodePair(row, true, rowNumber, hints);
     addOrTally(possibleRightPairs, rightPair);
     row.reverse();
-    int lefSize = possibleLeftPairs.size();
-    for (int i = 0; i < lefSize; i++) {
-      Pair left = possibleLeftPairs.get(i);
+    for (Pair left : possibleLeftPairs) {
       if (left.getCount() > 1) {
-        int rightSize = possibleRightPairs.size();
-        for (int j = 0; j < rightSize; j++) {
-          Pair right = possibleRightPairs.get(j);
+        for (Pair right : possibleRightPairs) {
           if (right.getCount() > 1) {
             if (checkChecksum(left, right)) {
               return constructResult(left, right);
@@ -143,11 +139,11 @@ public final class RSS14Reader extends AbstractRSSReader {
   }
 
   private static boolean checkChecksum(Pair leftPair, Pair rightPair) {
-    //int leftFPValue = leftPair.getFinderPattern().getValue();
-    //int rightFPValue = rightPair.getFinderPattern().getValue();
-    //if ((leftFPValue == 0 && rightFPValue == 8) ||
-    //    (leftFPValue == 8 && rightFPValue == 0)) {
-    //}
+    int leftFPValue = leftPair.getFinderPattern().getValue();
+    int rightFPValue = rightPair.getFinderPattern().getValue();
+    if ((leftFPValue == 0 && rightFPValue == 8) ||
+        (leftFPValue == 8 && rightFPValue == 0)) {
+    }
     int checkValue = (leftPair.getChecksumPortion() + 16 * rightPair.getChecksumPortion()) % 79;
     int targetCheckValue =
         9 * leftPair.getFinderPattern().getValue() + rightPair.getFinderPattern().getValue();
@@ -182,7 +178,7 @@ public final class RSS14Reader extends AbstractRSSReader {
       return new Pair(1597 * outside.getValue() + inside.getValue(),
                       outside.getChecksumPortion() + 4 * inside.getChecksumPortion(),
                       pattern);
-    } catch (NotFoundException ignored) {
+    } catch (NotFoundException re) {
       return null;
     }
   }
@@ -228,7 +224,7 @@ public final class RSS14Reader extends AbstractRSSReader {
       } else if (count > 8) {
         count = 8;
       }
-      int offset = i / 2;
+      int offset = i >> 1;
       if ((i & 0x01) == 0) {
         oddCounts[offset] = count;
         oddRoundingErrors[offset] = value - count;

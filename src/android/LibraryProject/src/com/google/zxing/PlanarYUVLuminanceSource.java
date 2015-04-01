@@ -28,8 +28,6 @@ package com.google.zxing;
  */
 public final class PlanarYUVLuminanceSource extends LuminanceSource {
 
-  private static final int THUMBNAIL_SCALE_FACTOR = 2;
-  
   private final byte[] yuvData;
   private final int dataWidth;
   private final int dataHeight;
@@ -122,9 +120,9 @@ public final class PlanarYUVLuminanceSource extends LuminanceSource {
                                         false);
   }
 
-  public int[] renderThumbnail() {
-    int width = getWidth() / THUMBNAIL_SCALE_FACTOR;
-    int height = getHeight() / THUMBNAIL_SCALE_FACTOR;
+  public int[] renderCroppedGreyscaleBitmap() {
+    int width = getWidth();
+    int height = getHeight();
     int[] pixels = new int[width * height];
     byte[] yuv = yuvData;
     int inputOffset = top * dataWidth + left;
@@ -132,26 +130,12 @@ public final class PlanarYUVLuminanceSource extends LuminanceSource {
     for (int y = 0; y < height; y++) {
       int outputOffset = y * width;
       for (int x = 0; x < width; x++) {
-        int grey = yuv[inputOffset + x * THUMBNAIL_SCALE_FACTOR] & 0xff;
+        int grey = yuv[inputOffset + x] & 0xff;
         pixels[outputOffset + x] = 0xFF000000 | (grey * 0x00010101);
       }
-      inputOffset += dataWidth * THUMBNAIL_SCALE_FACTOR;
+      inputOffset += dataWidth;
     }
     return pixels;
-  }
-  
-  /**
-   * @return width of image from {@link #renderThumbnail()}
-   */
-  public int getThumbnailWidth() {
-    return getWidth() / THUMBNAIL_SCALE_FACTOR;
-  }
-  
-  /**
-   * @return height of image from {@link #renderThumbnail()}
-   */  
-  public int getThumbnailHeight() {
-    return getHeight() / THUMBNAIL_SCALE_FACTOR;
   }
 
   private void reverseHorizontal(int width, int height) {
