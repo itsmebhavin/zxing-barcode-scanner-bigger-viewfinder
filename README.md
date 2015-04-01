@@ -34,13 +34,7 @@ HOW TO USE?
 SOURCE 
 --------
 
-Thanks to Original ZXING Project 
-      https://github.com/zxing/zxing
-and also barcode scanner plugin for cordova (Source of my project)
-      https://github.com/wildabeast/BarcodeScanner/#using-the-plugin
-      
-      
-
-
-
-2.  
+1.  Thanks to Original ZXING Project 
+    https://github.com/zxing/zxing
+2.  and also barcode scanner plugin for cordova (Source of my project)
+    `https://github.com/wildabeast/BarcodeScanner/#using-the-plugin
