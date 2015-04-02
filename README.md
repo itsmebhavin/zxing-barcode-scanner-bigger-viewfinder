@@ -1,40 +1,161 @@
-How I generated this modified ZXING .jar file?
-------------------------------------------------
-Viewfinder (crop) area can be increased by changing the "MAX_FRAME_WIDTH" and "MAX_FRAME_HEIGHT" in "CameraManager.java" (lines 44 and 45). CameraManager.java can be found in:
+BarcodeScanner
+==============
 
-yourproject/plugins/com.phonegap.plugins.barcodescanner/src/android/LibraryProject/src/com/google/zxing/client/android/camera/CameraManager.java
+Cross-platform BarcodeScanner for Cordova / PhoneGap.
 
-After that you have to re-build the library project:
+Follows the [Cordova Plugin spec](http://cordova.apache.org/docs/en/3.0.0/plugin_ref_spec.md), so that it works with [Plugman](https://github.com/apache/cordova-plugman).
 
-So assuming you have the Android SDK and tools (ie: ant) then what you need to do is go to the directory:
+### Supported Platforms
 
-yourpoject\plugins\com.phonegap.plugins.barcodescanner\src\android\LibraryProject
+- Android
+- iOS
+- Windows 8
+- Windows Phone 8
 
-you'll need to put a local.properties file in this folder, or make one, it only needs one line: sdk.dir=path/to/your/android/sdk
+Note: the Android source for this project includes an Android Library Project.
+plugman currently doesn't support Library Project refs, so its been
+prebuilt as a jar library. Any updates to the Library Project should be
+committed with an updated jar.
 
-then assuming you have all the correct build tools and api packages (i did not, had to open my sdk manager and install build tools 19.1 and api 17) you would just need to run: ant release
+## Using the plugin ##
+The plugin creates the object `cordova/plugin/BarcodeScanner` with the method `scan(success, fail)`. 
 
-which will build the executable jar, which for me showed up as: yourpoject\plugins\com.phonegap.plugins.barcodescanner\src\android\LibraryProject\bin\classes.jar
+The following barcode types are currently supported:
+### Android
 
-so rename it to: com.google.zxing.client.android.captureactivity.jar and put it under: yourpoject\plugins\com.phonegap.plugins.barcodescanner\src\android\
+* QR_CODE
+* DATA_MATRIX
+* UPC_E
+* UPC_A
+* EAN_8
+* EAN_13
+* CODE_128
+* CODE_39
+* CODE_93
+* CODABAR
+* ITF
+* RSS14
+* PDF417
+* RSS_EXPANDED
 
-also, to avoid removing/re-adding the platform (to redeploy the plugin) i also copied the file to: yourproject\platforms\android\libs\com.google.zxing.client.android.captureactivity.jar
+### iOS
 
-then just built the project.
+* QR_CODE
+* DATA_MATRIX
+* UPC_E
+* UPC_A
+* EAN_8
+* EAN_13
+* CODE_128
+* CODE_39
+* ITF
+
+### Windows8
+
+* UPC_A
+* UPC_E
+* EAN_8
+* EAN_13
+* CODE_39
+* CODE_93
+* CODE_128
+* ITF
+* CODABAR
+* MSI
+* RSS14
+* QR_CODE
+* DATA_MATRIX
+* AZTEC
+* PDF417
+
+### Windows Phone 8
+
+* UPC_A
+* UPC_E
+* EAN_8
+* EAN_13
+* CODE_39
+* CODE_93
+* CODE_128
+* ITF
+* CODABAR
+* MSI
+* RSS14
+* QR_CODE
+* DATA_MATRIX
+* AZTEC
+* PDF417
+
+`success` and `fail` are callback functions. Success is passed an object with data, type and cancelled properties. Data is the text representation of the barcode data, type is the type of barcode detected and cancelled is whether or not the user cancelled the scan.
+
+A full example could be:
+```
+   cordova.plugins.barcodeScanner.scan(
+      function (result) {
+          alert("We got a barcode\n" +
+                "Result: " + result.text + "\n" +
+                "Format: " + result.format + "\n" +
+                "Cancelled: " + result.cancelled);
+      }, 
+      function (error) {
+          alert("Scanning failed: " + error);
+      }
+   );
+```
+
+## Encoding a Barcode ##
+
+The plugin creates the object `cordova.plugins.barcodeScanner` with the method `encode(type, data, success, fail)`. 
+
+Supported encoding types:
+
+* TEXT_TYPE
+* EMAIL_TYPE
+* PHONE_TYPE
+* SMS_TYPE
+
+```
+A full example could be:
+
+   cordova.plugins.barcodeScanner.encode(cordova.plugins.barcodeScanner.Encode.TEXT_TYPE, "http://www.nytimes.com", function(success) {
+            alert("encode success: " + success);
+          }, function(fail) {
+            alert("encoding failed: " + fail);
+          }
+        );
+```
+
+## Windows8 quirks ##
+Windows 8 implenemtation currently doesn't support encode functionality.
+
+## Windows Phone 8 quirks ##
+Windows Phone 8 implenemtation currently doesn't support encode functionality.
+
+## Thanks on Github ##
+
+So many -- check out the original [iOS](https://github.com/phonegap/phonegap-plugins/tree/DEPRECATED/iOS/BarcodeScanner) and [Android](https://github.com/phonegap/phonegap-plugins/tree/DEPRECATED/Android/BarcodeScanner) repos.
 
 
-HOW TO USE?
-------------
-1. Grab pre-built com.google.zxing.client.android.captureactivity.jar file from dist directory & place it under 2 locations in your projects.
-    - yourpoject\plugins\com.phonegap.plugins.barcodescanner\src\android\
-    - yourproject\platforms\android\libs\
-2. Build your project and you should have barcode scanner with bigger viewfinder.
+## Licence ##
 
+The MIT License
 
-SOURCE 
---------
+Copyright (c) 2010 Matt Kane
 
-1.  Thanks to Original ZXING Project 
-    https://github.com/zxing/zxing
-2.  and also barcode scanner plugin for cordova (Source of my project)
-    `https://github.com/wildabeast/BarcodeScanner/#using-the-plugin
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.

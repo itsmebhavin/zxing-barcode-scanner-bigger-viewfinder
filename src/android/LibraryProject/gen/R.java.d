@@ -57,11 +57,4 @@ D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\res\values
 D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\res\values-zh-rCN\strings.xml \
 D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\res\values-zh-rTW\strings.xml \
 D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\res\xml\preferences.xml \
-D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\res\drawable\launcher_icon.png \
-D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\res\drawable\share_via_barcode.png \
-D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\res\drawable\shopper_icon.png \
-D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\res\drawable-hdpi\launcher_icon.png \
-D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\res\drawable-hdpi\shopper_icon.png \
-D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\res\drawable-xhdpi\launcher_icon.png \
-D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\res\drawable-xxhdpi\launcher_icon.png \
 D:\BitBucket\Android\BarcodeScanner-master\src\android\LibraryProject\bin\AndroidManifest.xml \
